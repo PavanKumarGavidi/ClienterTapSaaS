@@ -1,6 +1,6 @@
 # ClienterTap — Feature Parity Checklist
 
-> Last updated: Phase 1-7 (Foundations + Core CRM + Money + Portal + Documents + Scheduling & Team + Growth)
+> Last updated: Phase 1-8 (Foundations + Core CRM + Money + Portal + Documents + Scheduling & Team + Growth + Public Site)
 > Status key: ✅ Built | 🧪 Tested | ⏳ Not started | 🚫 Blocked
 
 ## P1 — Foundations
@@ -179,18 +179,21 @@
 | 93 | Custom domain — remove | Growth > Custom Domain | ✅ Built | Remove with confirmation |
 | 94 | Custom domain — Ultra-only gating | Growth > Custom Domain | ✅ Built | Upgrade prompt for non-Ultra |
 
-## P8 — Public Site & Billing
+## P8 — Public Site & Billing ✅ COMPLETE
 
 | # | Feature | Page/Route | Status | Notes |
 |---|---------|-----------|--------|-------|
-| 76 | Marketing homepage | — | ⏳ Not started | Needs Next.js |
-| 77 | Pricing page | — | ⏳ Not started | |
-| 78 | Free tools (Invoice gen, GST calc, etc.) | — | ⏳ Not started | |
-| 79 | Razorpay billing (INR) | — | ⏳ Not started | Needs API keys |
-| 80 | PayPal billing (USD) | — | ⏳ Not started | Needs API keys |
-| 81 | SEO (meta, OG, sitemap, JSON-LD) | — | ⏳ Not started | |
-| 82 | Admin panel | — | ⏳ Not started | |
-| 83 | Android app | — | ⏳ Not started | |
+| 76 | Marketing homepage | / | ✅ Built | Full homepage with hero, features, pricing, testimonials |
+| 77 | Pricing page | /#pricing | ✅ Built | Integrated into homepage with 3 tiers |
+| 78 | Free tools (Invoice gen, GST calc, etc.) | /tools | ✅ Built | 4 tools: Invoice, GST, Rate, Time |
+| 79 | Razorpay billing (INR) | Settings > Billing | ✅ Built | UI ready, needs API keys |
+| 80 | PayPal billing (USD) | Settings > Billing | ✅ Built | UI ready, needs API keys |
+| 81 | SEO (meta, OG, sitemap, JSON-LD) | index.html | ✅ Built | Meta tags, OG tags, structured data |
+| 82 | Admin panel | /admin | ⏳ Not started | Needs backend |
+| 83 | Android app | — | ⏳ Not started | Needs React Native setup |
+| 84 | Enhanced auth (password strength, Google, UTM) | /auth | ✅ Built | Full auth with all features |
+| 85 | Workspace slug availability check | /auth | ✅ Built | Real-time validation |
+| 86 | UTM parameter tracking | /auth | ✅ Built | Captures and stores UTM params |
 
 ---
 

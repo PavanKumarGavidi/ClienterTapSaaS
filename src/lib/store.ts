@@ -232,14 +232,27 @@ export const actions = {
     state = { ...state, isAuthenticated: false, currentUserId: null };
     saveState();
   },
-  signup(data: { name: string; email: string; workspaceName: string; country: string }) {
+  signup(data: { name: string; email: string; password?: string; workspaceName: string; slug?: string; country: string; utmSource?: string; utmMedium?: string; utmCampaign?: string }) {
     const wsId = 'ws-' + uuid().slice(0, 8);
     const userId = 'user-' + uuid().slice(0, 8);
     state = createDefaultState();
-    state.workspace = { id: wsId, name: data.workspaceName, slug: data.workspaceName.toLowerCase().replace(/\s+/g, '-'), logo: '', currency: 'INR', country: data.country, plan: 'free', createdAt: new Date().toISOString() };
+    state.workspace = { 
+      id: wsId, 
+      name: data.workspaceName, 
+      slug: data.slug || data.workspaceName.toLowerCase().replace(/\s+/g, '-'), 
+      logo: '', 
+      currency: 'INR', 
+      country: data.country, 
+      plan: 'free', 
+      createdAt: new Date().toISOString() 
+    };
     state.users = [{ id: userId, workspaceId: wsId, name: data.name, email: data.email, role: 'owner' }];
     state.currentUserId = userId;
     state.isAuthenticated = true;
+    // Store UTM parameters (in production would save to database)
+    if (data.utmSource || data.utmMedium || data.utmCampaign) {
+      console.log('UTM captured:', { source: data.utmSource, medium: data.utmMedium, campaign: data.utmCampaign });
+    }
     saveState();
   },
 

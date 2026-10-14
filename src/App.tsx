@@ -3,6 +3,9 @@ import { getState, subscribe, actions } from './lib/store';
 import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES, DocumentType, IntakeFormField, IntakeFieldType, Meeting, TeamRole, Permission } from './lib/types';
 import PortalApp from './PortalApp';
 import { GrowthSettingsPage, PublicReviewsPage } from './GrowthPages';
+import { MarketingSite } from './MarketingSite';
+import { AuthPage } from './AuthPage';
+import { FreeToolsPage } from './FreeTools';
 import {
   LayoutDashboard, Users, UserCircle, FolderKanban, CreditCard, MessageSquare,
   Calendar, CheckSquare, FileText, UserPlus, Settings, Activity, Bell, Search,
@@ -44,8 +47,8 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-// Auth Page
-function AuthPage({ onAuth }: { onAuth: () => void }) {
+// Legacy Auth Page (replaced by AuthPage.tsx)
+function LegacyAuthPage({ onAuth }: { onAuth: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -3449,14 +3452,31 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [view, setView] = useState<'marketing' | 'auth' | 'app' | 'tools'>('marketing');
 
-  if (!state.isAuthenticated) {
-    return <AuthPage onAuth={() => {}} />;
+  // Route to marketing site by default
+  if (view === 'marketing') {
+    return (
+      <MarketingSite 
+        onSignIn={() => setView('auth')} 
+        onStartFree={() => setView('auth')} 
+      />
+    );
+  }
+
+  // Route to free tools
+  if (view === 'tools') {
+    return <FreeToolsPage />;
+  }
+
+  // Route to auth page
+  if (!state.isAuthenticated || view === 'auth') {
+    return <AuthPage onAuth={() => setView('app')} />;
   }
 
   // Phase 4 — Portal mode detection
   if (state.currentPortalUserId) {
-    return <PortalApp onExit={() => {}} />;
+    return <PortalApp onExit={() => setView('app')} />;
   }
 
   const unreadCount = state.notifications.filter(n => !n.read).length;
