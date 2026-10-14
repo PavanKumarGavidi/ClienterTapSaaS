@@ -1,4 +1,4 @@
-import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral, Document, DocumentTemplate, Signature, IntakeForm, IntakeResponse } from './types';
+import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral, Document, DocumentTemplate, Signature, IntakeForm, IntakeResponse, TeamMember, TeamInvite, Payroll, Payslip, PushSubscription, NotificationPreference, TeamRole, Permission } from './types';
 import { v4 as uuid } from 'uuid';
 
 const STORAGE_KEY = 'clientertap_state';
@@ -38,8 +38,8 @@ function createDefaultState(): AppState {
     { id: 'pay2', workspaceId: wsId, invoiceId: 'inv2', clientId: 'c2', amount: 1000, currency: 'USD', date: '2026-03-15', method: 'Wire Transfer', reference: 'WT-5678', createdAt: now },
   ];
   const meetings: Meeting[] = [
-    { id: 'm1', workspaceId: wsId, title: 'Brand Review Call', clientId: 'c1', projectId: 'p1', date: new Date(Date.now() + 7200000).toISOString().split('T')[0], time: '14:00', duration: 60, attendees: ['Ananya Gupta'], agenda: 'Review brand concepts', notes: '', createdAt: now },
-    { id: 'm2', workspaceId: wsId, title: 'Sprint Planning', clientId: 'c2', projectId: 'p2', date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], time: '10:00', duration: 45, attendees: ['David Kim'], agenda: 'Plan next sprint tasks', notes: '', createdAt: now },
+    { id: 'm1', workspaceId: wsId, title: 'Brand Review Call', clientId: 'c1', projectId: 'p1', date: new Date(Date.now() + 7200000).toISOString().split('T')[0], time: '14:00', duration: 60, attendees: ['Ananya Gupta'], agenda: 'Review brand concepts', notes: '', meetLink: 'https://meet.google.com/abc-defg-hij', calendarEventId: 'evt_123', reminderSent: false, reminderTime: 15, createdAt: now },
+    { id: 'm2', workspaceId: wsId, title: 'Sprint Planning', clientId: 'c2', projectId: 'p2', date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], time: '10:00', duration: 45, attendees: ['David Kim'], agenda: 'Plan next sprint tasks', notes: '', meetLink: 'https://meet.google.com/klm-nopq-rst', calendarEventId: 'evt_456', reminderSent: false, reminderTime: 30, createdAt: now },
   ];
   const tasks: Task[] = [
     { id: 't1', workspaceId: wsId, title: 'Finalize logo concepts', description: 'Create 3 logo options', assigneeId: userId, projectId: 'p1', dueDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], priority: 'high', status: 'in-progress', createdAt: now },
@@ -152,6 +152,25 @@ function createDefaultState(): AppState {
       submittedAt: new Date(Date.now() - 86400000).toISOString(), ipAddress: '103.21.58.78', userAgent: 'Mozilla/5.0'
     },
   ];
+  // Phase 6 — Team & Scheduling seed data
+  const teamMembers: TeamMember[] = [
+    { id: 'tm-1', workspaceId: wsId, userId, name: 'Vikram Singh', email: 'vikram@nova.co', role: 'owner', permissions: ['leads', 'clients', 'projects', 'invoices', 'team', 'settings'], joinedAt: now, status: 'active' },
+    { id: 'tm-2', workspaceId: wsId, userId: 'user-2', name: 'Priya Designer', email: 'priya.d@nova.co', role: 'member', permissions: ['clients', 'projects'], joinedAt: new Date(Date.now() - 86400000 * 30).toISOString(), status: 'active' },
+  ];
+  const teamInvites: TeamInvite[] = [
+    { id: 'ti-1', workspaceId: wsId, email: 'rahul.dev@nova.co', role: 'member', permissions: ['projects'], token: 'invite-token-rahul', invitedBy: userId, invitedAt: now, expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(), status: 'pending' },
+  ];
+  const payroll: Payroll[] = [
+    { id: 'pr-1', workspaceId: wsId, teamMemberId: 'tm-2', month: '2026-03', baseSalary: 45000, bonuses: 5000, deductions: 2000, netPay: 48000, currency: 'INR', status: 'paid', paidAt: '2026-03-28', notes: 'March salary with project bonus', createdAt: now },
+    { id: 'pr-2', workspaceId: wsId, teamMemberId: 'tm-2', month: '2026-04', baseSalary: 45000, bonuses: 0, deductions: 0, netPay: 45000, currency: 'INR', status: 'draft', notes: 'April salary', createdAt: now },
+  ];
+  const payslips: Payslip[] = [
+    { id: 'ps-1', workspaceId: wsId, payrollId: 'pr-1', teamMemberId: 'tm-2', generatedAt: '2026-03-28T10:00:00Z', pdfUrl: '/payslips/ps-1.pdf' },
+  ];
+  const pushSubscriptions: PushSubscription[] = [];
+  const notificationPreferences: NotificationPreference[] = [
+    { id: 'np-1', workspaceId: wsId, userId, email: true, push: true, meetingReminders: true, paymentAlerts: true, leadFollowups: true, taskReminders: true },
+  ];
   return {
     isAuthenticated: true,
     currentUserId: userId,
@@ -161,6 +180,7 @@ function createDefaultState(): AppState {
     aiQuotesUsed: 1, aiQuotesResetDate: '2026-04-01', storageUsed: 45,
     portalUsers, currentPortalUserId: null, messageThreads, messages, files, projectUpdates, reviews, referrals,
     documents, documentTemplates, signatures, intakeForms, intakeResponses,
+    teamMembers, teamInvites, payroll, payslips, pushSubscriptions, notificationPreferences,
   };
 }
 
@@ -763,6 +783,167 @@ export const actions = {
     state = { ...state, documentTemplates: [...state.documentTemplates, newTpl] };
     saveState();
     return { success: true };
+  },
+
+  // Phase 6 — Team & Scheduling actions
+  inviteTeamMember(email: string, role: TeamRole, permissions: Permission[]) {
+    const limits = PLAN_LIMITS[state.workspace!.plan];
+    const activeMembers = state.teamMembers.filter(m => m.status === 'active').length;
+    if (activeMembers >= limits.teammates) {
+      return { error: `Team member limit reached (${limits.teammates}). Upgrade your plan.` };
+    }
+    const token = 'invite-' + uuid().slice(0, 12);
+    const invite: TeamInvite = {
+      id: 'ti-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      email,
+      role,
+      permissions,
+      token,
+      invitedBy: state.currentUserId!,
+      invitedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
+      status: 'pending'
+    };
+    state = { ...state, teamInvites: [...state.teamInvites, invite] };
+    addActivity('team_invite_sent', `Invited ${email} as ${role}`, 'team', invite.id);
+    saveState();
+    return { success: true, inviteId: invite.id, token };
+  },
+
+  acceptTeamInvite(token: string, name: string) {
+    const invite = state.teamInvites.find(i => i.token === token);
+    if (!invite) return { error: 'Invalid invite token' };
+    if (invite.status !== 'pending') return { error: 'Invite already accepted or expired' };
+    if (new Date(invite.expiresAt) < new Date()) return { error: 'Invite has expired' };
+
+    const member: TeamMember = {
+      id: 'tm-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      userId: 'user-' + uuid().slice(0, 8),
+      name,
+      email: invite.email,
+      role: invite.role,
+      permissions: invite.permissions,
+      joinedAt: new Date().toISOString(),
+      status: 'active'
+    };
+    state = {
+      ...state,
+      teamMembers: [...state.teamMembers, member],
+      teamInvites: state.teamInvites.map(i => i.id === invite.id ? { ...i, status: 'accepted' as const } : i)
+    };
+    addActivity('team_member_joined', `${name} joined the team as ${invite.role}`, 'team', member.id);
+    saveState();
+    return { success: true, memberId: member.id };
+  },
+
+  updateTeamMember(id: string, updates: Partial<TeamMember>) {
+    state = { ...state, teamMembers: state.teamMembers.map(m => m.id === id ? { ...m, ...updates } : m) };
+    saveState();
+  },
+
+  removeTeamMember(id: string) {
+    state = { ...state, teamMembers: state.teamMembers.filter(m => m.id !== id) };
+    saveState();
+  },
+
+  // Meetings with Google Calendar/Meet integration
+  addMeetingWithIntegration(meeting: Omit<Meeting, 'id' | 'workspaceId' | 'createdAt' | 'meetLink' | 'calendarEventId' | 'reminderSent'>) {
+    const meetLink = `https://meet.google.com/${uuid().slice(0, 3)}-${uuid().slice(0, 4)}-${uuid().slice(0, 3)}`;
+    const calendarEventId = 'evt_' + uuid().slice(0, 8);
+    const newMeeting: Meeting = {
+      ...meeting,
+      id: 'm-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      meetLink,
+      calendarEventId,
+      reminderSent: false,
+      createdAt: new Date().toISOString()
+    };
+    state = { ...state, meetings: [...state.meetings, newMeeting] };
+    addActivity('meeting_scheduled', `Scheduled "${meeting.title}" with Meet link`, 'meeting', newMeeting.id);
+    saveState();
+    return { success: true, meetingId: newMeeting.id, meetLink, calendarEventId };
+  },
+
+  sendMeetingReminder(meetingId: string) {
+    const meeting = state.meetings.find(m => m.id === meetingId);
+    if (!meeting) return { error: 'Meeting not found' };
+    state = {
+      ...state,
+      meetings: state.meetings.map(m => m.id === meetingId ? { ...m, reminderSent: true } : m)
+    };
+    addActivity('meeting_reminder_sent', `Sent reminder for "${meeting.title}"`, 'meeting', meetingId);
+    saveState();
+    return { success: true };
+  },
+
+  // Web Push
+  registerPushSubscription(endpoint: string, keys: { p256dh: string; auth: string }) {
+    const sub: PushSubscription = {
+      id: 'push-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      userId: state.currentUserId!,
+      endpoint,
+      keys,
+      createdAt: new Date().toISOString()
+    };
+    state = { ...state, pushSubscriptions: [...state.pushSubscriptions, sub] };
+    saveState();
+    return { success: true };
+  },
+
+  // Notification preferences
+  updateNotificationPreferences(userId: string, updates: Partial<NotificationPreference>) {
+    state = {
+      ...state,
+      notificationPreferences: state.notificationPreferences.map(p => p.userId === userId ? { ...p, ...updates } : p)
+    };
+    saveState();
+  },
+
+  // Payroll (Ultra feature)
+  addPayroll(entry: Omit<Payroll, 'id' | 'workspaceId' | 'createdAt' | 'netPay'>) {
+    if (state.workspace?.plan !== 'ultra') {
+      return { error: 'Payroll is only available on Ultra plan' };
+    }
+    const netPay = entry.baseSalary + entry.bonuses - entry.deductions;
+    const newPayroll: Payroll = {
+      ...entry,
+      id: 'pr-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      netPay,
+      createdAt: new Date().toISOString()
+    };
+    state = { ...state, payroll: [...state.payroll, newPayroll] };
+    addActivity('payroll_created', `Created payroll for ${entry.month}`, 'payroll', newPayroll.id);
+    saveState();
+    return { success: true, payrollId: newPayroll.id };
+  },
+
+  markPayrollPaid(id: string) {
+    state = {
+      ...state,
+      payroll: state.payroll.map(p => p.id === id ? { ...p, status: 'paid' as const, paidAt: new Date().toISOString() } : p)
+    };
+    saveState();
+  },
+
+  generatePayslip(payrollId: string) {
+    const payroll = state.payroll.find(p => p.id === payrollId);
+    if (!payroll) return { error: 'Payroll entry not found' };
+    const payslip: Payslip = {
+      id: 'ps-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      payrollId,
+      teamMemberId: payroll.teamMemberId,
+      generatedAt: new Date().toISOString(),
+      pdfUrl: `/payslips/ps-${uuid().slice(0, 8)}.pdf`
+    };
+    state = { ...state, payslips: [...state.payslips, payslip] };
+    saveState();
+    return { success: true, payslipId: payslip.id, pdfUrl: payslip.pdfUrl };
   },
 
   // Reset

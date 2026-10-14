@@ -140,6 +140,10 @@ export interface Meeting {
   attendees: string[];
   agenda: string;
   notes: string;
+  meetLink?: string;
+  calendarEventId?: string;
+  reminderSent: boolean;
+  reminderTime?: number; // minutes before
   createdAt: string;
 }
 
@@ -281,6 +285,85 @@ export interface Referral {
   createdAt: string;
 }
 
+// Phase 6 — Team & Scheduling types
+export type TeamRole = 'owner' | 'admin' | 'member' | 'viewer';
+export type Permission = 'leads' | 'clients' | 'projects' | 'invoices' | 'team' | 'settings';
+
+export interface TeamMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  permissions: Permission[];
+  avatar?: string;
+  joinedAt: string;
+  status: 'active' | 'invited' | 'suspended';
+}
+
+export interface TeamInvite {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: TeamRole;
+  permissions: Permission[];
+  token: string;
+  invitedBy: string;
+  invitedAt: string;
+  expiresAt: string;
+  status: 'pending' | 'accepted' | 'expired';
+}
+
+export interface Payroll {
+  id: string;
+  workspaceId: string;
+  teamMemberId: string;
+  month: string; // YYYY-MM
+  baseSalary: number;
+  bonuses: number;
+  deductions: number;
+  netPay: number;
+  currency: string;
+  status: 'draft' | 'approved' | 'paid';
+  paidAt?: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface Payslip {
+  id: string;
+  workspaceId: string;
+  payrollId: string;
+  teamMemberId: string;
+  generatedAt: string;
+  pdfUrl?: string;
+}
+
+export interface PushSubscription {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  createdAt: string;
+}
+
+export interface NotificationPreference {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  email: boolean;
+  push: boolean;
+  meetingReminders: boolean;
+  paymentAlerts: boolean;
+  leadFollowups: boolean;
+  taskReminders: boolean;
+}
+
 // Phase 5 — Documents types
 export type DocumentType = 'proposal' | 'contract' | 'quotation' | 'nda' | 'other';
 export type DocumentStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired';
@@ -406,6 +489,13 @@ export interface AppState {
   signatures: Signature[];
   intakeForms: IntakeForm[];
   intakeResponses: IntakeResponse[];
+  // Phase 6 — Team & Scheduling
+  teamMembers: TeamMember[];
+  teamInvites: TeamInvite[];
+  payroll: Payroll[];
+  payslips: Payslip[];
+  pushSubscriptions: PushSubscription[];
+  notificationPreferences: NotificationPreference[];
 }
 
 export const PLAN_LIMITS: Record<Plan, {

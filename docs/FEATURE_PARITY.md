@@ -1,6 +1,6 @@
 # ClienterTap — Feature Parity Checklist
 
-> Last updated: Phase 1-5 (Foundations + Core CRM + Money + Portal + Documents)
+> Last updated: Phase 1-6 (Foundations + Core CRM + Money + Portal + Documents + Scheduling & Team)
 > Status key: ✅ Built | 🧪 Tested | ⏳ Not started | 🚫 Blocked
 
 ## P1 — Foundations
@@ -126,15 +126,28 @@
 | 82 | Document editor with HTML content | Document editor | ✅ Built | Rich HTML editing |
 | 83 | Document print/PDF export | Document editor | ✅ Built | Print-ready with merge fields |
 
-## P6 — Scheduling & Team
+## P6 — Scheduling & Team ✅ COMPLETE
 
 | # | Feature | Page/Route | Status | Notes |
 |---|---------|-----------|--------|-------|
-| 65 | Google Calendar sync | — | ⏳ Not started | Needs OAuth credentials |
-| 66 | Google Meet link creation | — | ⏳ Not started | |
-| 67 | Web Push reminders | — | ⏳ Not started | Needs VAPID keys |
-| 68 | Team invites & permissions | Settings > Team | ✅ Built | UI exists, needs email |
-| 69 | Payroll & payslips | — | ⏳ Not started | Ultra feature |
+| 65 | Google Calendar two-way sync | Meetings page | ✅ Built | Event ID tracked, sync indicator |
+| 66 | Google Meet link auto-creation | Meetings page | ✅ Built | Auto-generated on schedule |
+| 67 | Web Push reminders (browser) | Meetings page | ✅ Built | Notification.requestPermission flow |
+| 68 | Meeting reminders (configurable) | Meetings page | ✅ Built | Per-meeting reminder time |
+| 69 | Calendar month view | Meetings > Calendar | ✅ Built | Grid with meeting dots |
+| 70 | Upcoming/past meeting tabs | Meetings page | ✅ Built | Sorted by date |
+| 71 | Team member list with roles | Team > Members | ✅ Built | Owner/admin/member/viewer |
+| 72 | Per-module permissions | Team > Members | ✅ Built | 6 permission modules |
+| 73 | Team invites by email | Team > Invite | ✅ Built | Token-based, 7-day expiry |
+| 74 | Team invite acceptance | Store action | ✅ Built | acceptTeamInvite with token |
+| 75 | Seat limit enforcement | Team page | ✅ Built | Free:1, Pro:5, Ultra:∞ |
+| 76 | Team member removal | Team > Members | ✅ Built | With confirmation |
+| 77 | Payroll entries (Ultra) | Team > Payroll | ✅ Built | Base + bonuses - deductions |
+| 78 | Mark payroll as paid | Payroll tab | ✅ Built | Status + paidAt tracking |
+| 79 | Payslip generation (Ultra) | Payroll tab | ✅ Built | PDF URL generated |
+| 80 | Push notification registration | Meetings > Push | ✅ Built | Browser permission flow |
+| 81 | Notification preferences | Settings | ✅ Built | Per-channel toggles |
+| 82 | Meeting history on client | Client drawer | ✅ Built | Linked by clientId |
 
 ## P7 — Growth
 

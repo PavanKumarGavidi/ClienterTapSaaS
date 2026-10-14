@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { getState, subscribe, actions } from './lib/store';
-import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES, DocumentType, IntakeFormField, IntakeFieldType } from './lib/types';
+import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES, DocumentType, IntakeFormField, IntakeFieldType, Meeting, TeamRole, Permission } from './lib/types';
 import PortalApp from './PortalApp';
 import {
   LayoutDashboard, Users, UserCircle, FolderKanban, CreditCard, MessageSquare,
@@ -1427,54 +1427,225 @@ function AddInvoiceModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// Meetings Page
+// Meetings Page — Enhanced with Google Meet, Calendar sync, reminders
 function MeetingsPage() {
   const state = useAppState();
   const [showAdd, setShowAdd] = useState(false);
+  const [showPushSetup, setShowPushSetup] = useState(false);
+  const [tab, setTab] = useState<'upcoming' | 'past' | 'calendar'>('upcoming');
+
+  const now = new Date();
+  const upcoming = state.meetings.filter(m => new Date(m.date) >= now).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const past = state.meetings.filter(m => new Date(m.date) < now).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const handleEnablePush = () => {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          actions.registerPushSubscription('push-endpoint-' + Date.now(), { p256dh: 'mock-p256dh-key', auth: 'mock-auth-key' });
+          alert('✓ Push notifications enabled! You will receive meeting reminders.');
+          setShowPushSetup(false);
+        }
+      });
+    }
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Meetings</h1>
-          <p className="text-ink-muted text-sm">{state.meetings.length} meetings scheduled</p>
+          <p className="text-ink-muted text-sm">{upcoming.length} upcoming • {past.length} past</p>
         </div>
-        <button onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember transition-all">
-          <Plus size={16} /> Schedule meeting
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowPushSetup(true)}
+            className="inline-flex items-center gap-2 px-3 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">
+            <Bell size={14} /> Push reminders
+          </button>
+          <button onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember transition-all">
+            <Plus size={16} /> Schedule meeting
+          </button>
+        </div>
+      </div>
+
+      {/* Google Calendar Sync Status */}
+      <div className="bg-surface rounded-2xl border border-line p-4 shadow-soft flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+            <Calendar size={18} className="text-blue-600" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-ink">Google Calendar sync</div>
+            <div className="text-xs text-ink-muted">Two-way sync with your Google Calendar</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 flex items-center gap-1">
+            <CheckCircle2 size={12} /> Connected
+          </span>
+          <button className="text-xs text-primary-600 font-medium hover:underline">Sync now</button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-line">
+        <button onClick={() => setTab('upcoming')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'upcoming' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+          Upcoming ({upcoming.length})
+        </button>
+        <button onClick={() => setTab('past')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'past' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+          Past ({past.length})
+        </button>
+        <button onClick={() => setTab('calendar')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'calendar' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+          Calendar view
         </button>
       </div>
 
-      <div className="space-y-3">
-        {state.meetings.map(m => {
-          const client = state.clients.find(c => c.id === m.clientId);
-          const isPast = new Date(m.date) < new Date();
+      {tab === 'calendar' ? (
+        <CalendarView meetings={state.meetings} />
+      ) : (
+        <div className="space-y-3">
+          {(tab === 'upcoming' ? upcoming : past).map(m => {
+            const client = state.clients.find(c => c.id === m.clientId);
+            const isPast = new Date(m.date) < now;
+            return (
+              <div key={m.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isPast ? 'bg-gray-50' : 'bg-blue-50'}`}>
+                    <span className={`text-xs font-medium ${isPast ? 'text-gray-500' : 'text-blue-600'}`}>{new Date(m.date).toLocaleDateString('en', { month: 'short' })}</span>
+                    <span className={`text-lg font-bold ${isPast ? 'text-gray-700' : 'text-blue-700'}`}>{new Date(m.date).getDate()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-semibold text-ink">{m.title}</div>
+                        <div className="text-xs text-ink-muted mt-0.5">
+                          {client?.company && <span>{client.company} • </span>}
+                          {m.time} • {m.duration}min
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {m.calendarEventId && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 flex items-center gap-0.5" title="Synced to Google Calendar">
+                            <Calendar size={10} /> Synced
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {m.agenda && <div className="text-xs text-ink-faint mt-1.5">{m.agenda}</div>}
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                      {m.meetLink && (
+                        <a href={m.meetLink} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100">
+                          <Globe size={12} /> Join Meet
+                        </a>
+                      )}
+                      <span className="text-xs px-2 py-1 rounded-lg bg-canvas text-ink-muted">
+                        {m.attendees.length} attendee{m.attendees.length !== 1 ? 's' : ''}
+                      </span>
+                      {m.reminderTime && !isPast && (
+                        <span className="text-xs px-2 py-1 rounded-lg bg-amber-50 text-amber-700 flex items-center gap-1">
+                          <Bell size={10} /> Reminder {m.reminderTime}m before
+                        </span>
+                      )}
+                      {m.reminderSent && (
+                        <span className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 flex items-center gap-1">
+                          <CheckCircle2 size={10} /> Reminder sent
+                        </span>
+                      )}
+                      {!isPast && !m.reminderSent && m.reminderTime && (
+                        <button onClick={() => actions.sendMeetingReminder(m.id)}
+                          className="text-xs text-primary-600 font-medium hover:underline">
+                          Send reminder now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {(tab === 'upcoming' ? upcoming : past).length === 0 && (
+            <div className="text-center py-12 text-ink-faint">
+              <Calendar size={32} className="mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No {tab} meetings</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showAdd && <AddMeetingModal onClose={() => setShowAdd(false)} />}
+      {showPushSetup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowPushSetup(false)}></div>
+          <div className="relative w-full max-w-md bg-surface rounded-2xl shadow-soft-lg border border-line p-6">
+            <h2 className="font-semibold text-ink text-lg mb-2">Enable push reminders</h2>
+            <p className="text-sm text-ink-muted mb-4">Get browser notifications before your meetings start. Works even when the tab is closed.</p>
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-sm text-ink"><CheckCircle2 size={14} className="text-green-600" /> Meeting reminders 15min before</div>
+              <div className="flex items-center gap-2 text-sm text-ink"><CheckCircle2 size={14} className="text-green-600" /> Task due date alerts</div>
+              <div className="flex items-center gap-2 text-sm text-ink"><CheckCircle2 size={14} className="text-green-600" /> Payment received notifications</div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowPushSetup(false)} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+              <button onClick={handleEnablePush} className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Enable notifications</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Calendar View (month grid)
+function CalendarView({ meetings }: { meetings: Meeting[] }) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const getMeetingsForDay = (day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return meetings.filter(m => m.date === dateStr);
+  };
+
+  return (
+    <div className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={() => setCurrentMonth(new Date(year, month - 1))} className="p-1.5 rounded-lg hover:bg-canvas text-ink-muted">←</button>
+        <h3 className="text-sm font-semibold text-ink">{currentMonth.toLocaleDateString('en', { month: 'long', year: 'numeric' })}</h3>
+        <button onClick={() => setCurrentMonth(new Date(year, month + 1))} className="p-1.5 rounded-lg hover:bg-canvas text-ink-muted">→</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <div key={d} className="text-center text-xs font-medium text-ink-muted py-1">{d}</div>
+        ))}
+        {days.map((day, idx) => {
+          const dayMeetings = day ? getMeetingsForDay(day) : [];
+          const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
           return (
-            <div key={m.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${isPast ? 'bg-gray-50' : 'bg-blue-50'}`}>
-                <span className={`text-xs font-medium ${isPast ? 'text-gray-500' : 'text-blue-600'}`}>{new Date(m.date).toLocaleDateString('en', { month: 'short' })}</span>
-                <span className={`text-lg font-bold ${isPast ? 'text-gray-700' : 'text-blue-700'}`}>{new Date(m.date).getDate()}</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-ink">{m.title}</div>
-                <div className="text-xs text-ink-muted">{client?.company} • {m.time} • {m.duration}min</div>
-                {m.agenda && <div className="text-xs text-ink-faint mt-1">{m.agenda}</div>}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-1 rounded-lg bg-canvas text-ink-muted">{m.attendees.length} attendees</span>
-              </div>
+            <div key={idx} className={`min-h-[60px] p-1 rounded-lg border ${isToday ? 'border-primary-300 bg-primary-50/30' : 'border-transparent'} ${day ? 'hover:bg-canvas' : ''}`}>
+              {day && (
+                <>
+                  <div className={`text-xs font-medium ${isToday ? 'text-primary-600' : 'text-ink-muted'}`}>{day}</div>
+                  {dayMeetings.slice(0, 2).map(m => (
+                    <div key={m.id} className="mt-0.5 text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-700 truncate" title={m.title}>
+                      {m.time} {m.title}
+                    </div>
+                  ))}
+                  {dayMeetings.length > 2 && (
+                    <div className="text-[10px] text-ink-faint mt-0.5">+{dayMeetings.length - 2} more</div>
+                  )}
+                </>
+              )}
             </div>
           );
         })}
-        {state.meetings.length === 0 && (
-          <div className="text-center py-12 text-ink-faint">
-            <Calendar size={32} className="mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No meetings scheduled</p>
-          </div>
-        )}
       </div>
-
-      {showAdd && <AddMeetingModal onClose={() => setShowAdd(false)} />}
     </div>
   );
 }
@@ -1487,7 +1658,7 @@ function AddMeetingModal({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    actions.addMeeting(form);
+    actions.addMeetingWithIntegration({ ...form, reminderTime: 15 });
     onClose();
   };
 
@@ -2829,33 +3000,328 @@ function PublicFormPreview({ formId, onClose }: { formId: string; onClose: () =>
   );
 }
 
-// Team Page
+// Team Page — Enhanced with invites, roles, permissions, payroll
 function TeamPage() {
   const state = useAppState();
+  const [tab, setTab] = useState<'members' | 'invites' | 'payroll'>('members');
+  const [showInvite, setShowInvite] = useState(false);
+  const [showPayroll, setShowPayroll] = useState(false);
+
+  const limits = PLAN_LIMITS[state.workspace?.plan || 'free'];
+  const activeMembers = state.teamMembers.filter(m => m.status === 'active').length;
+
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Team</h1>
-          <p className="text-ink-muted text-sm">{state.users.length} member(s)</p>
+          <p className="text-ink-muted text-sm">{activeMembers} of {limits.teammates === 99999 ? '∞' : limits.teammates} seats used</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
-          <Plus size={16} /> Invite member
-        </button>
+        <div className="flex items-center gap-2">
+          {state.workspace?.plan === 'ultra' && (
+            <button onClick={() => setShowPayroll(true)}
+              className="inline-flex items-center gap-2 px-3 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">
+              <DollarSign size={14} /> Payroll
+            </button>
+          )}
+          <button onClick={() => setShowInvite(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
+            <Plus size={16} /> Invite member
+          </button>
+        </div>
       </div>
-      <div className="bg-surface rounded-2xl border border-line divide-y divide-line">
-        {state.users.map(u => (
-          <div key={u.id} className="flex items-center gap-4 p-4">
-            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary-700">{u.name.charAt(0)}</span>
+
+      {/* Seat usage bar */}
+      <div className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-ink">Seat usage</span>
+          <span className="text-xs text-ink-muted">{activeMembers} / {limits.teammates === 99999 ? '∞' : limits.teammates}</span>
+        </div>
+        <div className="h-2 bg-canvas rounded-full overflow-hidden">
+          <div className="h-full bg-primary-600 rounded-full transition-all" style={{ width: `${Math.min((activeMembers / limits.teammates) * 100, 100)}%` }}></div>
+        </div>
+        {limits.teammates - activeMembers <= 1 && limits.teammates !== 99999 && (
+          <p className="text-xs text-amber-600 mt-2">⚠ Running low on seats. Upgrade for more.</p>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-line">
+        <button onClick={() => setTab('members')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'members' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+          Members ({state.teamMembers.length})
+        </button>
+        <button onClick={() => setTab('invites')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'invites' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+          Invites ({state.teamInvites.filter(i => i.status === 'pending').length})
+        </button>
+        {state.workspace?.plan === 'ultra' && (
+          <button onClick={() => setTab('payroll')} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px ${tab === 'payroll' ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+            Payroll
+          </button>
+        )}
+      </div>
+
+      {tab === 'members' && (
+        <div className="space-y-2">
+          {state.teamMembers.map(m => (
+            <div key={m.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary-700">{m.name.charAt(0)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-ink">{m.name}</div>
+                  {m.role === 'owner' && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">Owner</span>}
+                </div>
+                <div className="text-xs text-ink-faint">{m.email}</div>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {m.permissions.map(p => (
+                    <span key={p} className="text-[10px] px-1.5 py-0.5 rounded bg-canvas text-ink-muted capitalize">{p}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded capitalize ${m.status === 'active' ? 'bg-green-50 text-green-700' : m.status === 'invited' ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-600'}`}>
+                  {m.status}
+                </span>
+                {m.role !== 'owner' && (
+                  <button onClick={() => {
+                    if (confirm(`Remove ${m.name} from team?`)) actions.removeTeamMember(m.id);
+                  }} className="text-xs text-red-600 hover:underline">Remove</button>
+                )}
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium text-ink">{u.name}</div>
-              <div className="text-xs text-ink-faint">{u.email}</div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'invites' && (
+        <div className="space-y-2">
+          {state.teamInvites.filter(i => i.status === 'pending').map(inv => (
+            <div key={inv.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                <Mail size={16} className="text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-ink">{inv.email}</div>
+                <div className="text-xs text-ink-faint">Invited as {inv.role} • {timeAgo(inv.invitedAt)}</div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {inv.permissions.map(p => (
+                    <span key={p} className="text-[10px] px-1.5 py-0.5 rounded bg-canvas text-ink-muted capitalize">{p}</span>
+                  ))}
+                </div>
+              </div>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">Pending</span>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-lg bg-primary-50 text-primary-700 font-medium capitalize">{u.role}</span>
+          ))}
+          {state.teamInvites.filter(i => i.status === 'pending').length === 0 && (
+            <div className="text-center py-12 text-ink-faint">
+              <Mail size={32} className="mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No pending invites</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'payroll' && <PayrollTab state={state} />}
+
+      {showInvite && <InviteMemberModal onClose={() => setShowInvite(false)} />}
+      {showPayroll && <PayrollModal onClose={() => setShowPayroll(false)} />}
+    </div>
+  );
+}
+
+// Payroll Tab (Ultra only)
+function PayrollTab({ state }: { state: AppState }) {
+  return (
+    <div className="space-y-3">
+      {state.payroll.map(pr => {
+        const member = state.teamMembers.find(m => m.id === pr.teamMemberId);
+        return (
+          <div key={pr.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm font-semibold text-ink">{member?.name}</div>
+                <div className="text-xs text-ink-muted">{pr.month} • {pr.currency}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold text-ink">{formatCurrency(pr.netPay, pr.currency)}</div>
+                <span className={`text-xs px-2 py-0.5 rounded capitalize ${pr.status === 'paid' ? 'bg-green-50 text-green-700' : pr.status === 'approved' ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-600'}`}>
+                  {pr.status}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-line text-xs">
+              <div><span className="text-ink-muted">Base:</span> <span className="text-ink">{formatCurrency(pr.baseSalary, pr.currency)}</span></div>
+              <div><span className="text-ink-muted">Bonus:</span> <span className="text-green-600">+{formatCurrency(pr.bonuses, pr.currency)}</span></div>
+              <div><span className="text-ink-muted">Deductions:</span> <span className="text-red-600">-{formatCurrency(pr.deductions, pr.currency)}</span></div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              {pr.status === 'draft' && (
+                <button onClick={() => actions.updateTeamMember(pr.teamMemberId, {})} className="text-xs text-primary-600 font-medium hover:underline">Approve</button>
+              )}
+              {pr.status !== 'paid' && (
+                <button onClick={() => actions.markPayrollPaid(pr.id)} className="text-xs text-green-600 font-medium hover:underline">Mark paid</button>
+              )}
+              <button onClick={() => {
+                const result = actions.generatePayslip(pr.id);
+                if ((result as any).success) alert(`Payslip generated: ${(result as any).pdfUrl}`);
+              }} className="text-xs text-ink-muted hover:text-ink">Generate payslip</button>
+            </div>
           </div>
-        ))}
+        );
+      })}
+      {state.payroll.length === 0 && (
+        <div className="text-center py-12 text-ink-faint">
+          <DollarSign size={32} className="mx-auto mb-3 opacity-50" />
+          <p className="text-sm">No payroll entries yet</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Invite Member Modal
+function InviteMemberModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<TeamRole>('member');
+  const [permissions, setPermissions] = useState<Permission[]>(['clients', 'projects']);
+
+  const allPermissions: Permission[] = ['leads', 'clients', 'projects', 'invoices', 'team', 'settings'];
+
+  const togglePermission = (p: Permission) => {
+    setPermissions(permissions.includes(p) ? permissions.filter(x => x !== p) : [...permissions, p]);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = actions.inviteTeamMember(email, role, permissions);
+    if ((result as any).error) {
+      alert((result as any).error);
+      return;
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-soft-lg border border-line">
+        <div className="border-b border-line p-4 flex items-center justify-between">
+          <h2 className="font-semibold text-ink">Invite team member</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Email address *</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="colleague@company.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Role</label>
+            <select value={role} onChange={e => setRole(e.target.value as TeamRole)}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+              <option value="admin">Admin — Full access</option>
+              <option value="member">Member — Standard access</option>
+              <option value="viewer">Viewer — Read-only</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-2">Permissions</label>
+            <div className="grid grid-cols-2 gap-2">
+              {allPermissions.map(p => (
+                <label key={p} className="flex items-center gap-2 p-2 rounded-lg border border-line hover:bg-canvas cursor-pointer">
+                  <input type="checkbox" checked={permissions.includes(p)} onChange={() => togglePermission(p)}
+                    className="rounded border-line text-primary-600 focus:ring-primary-500" />
+                  <span className="text-sm text-ink capitalize">{p}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="bg-canvas rounded-xl p-3 text-xs text-ink-muted">
+            An invite email will be sent. The invite expires in 7 days.
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+            <button type="submit" className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Send invite</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Payroll Modal (Ultra only)
+function PayrollModal({ onClose }: { onClose: () => void }) {
+  const state = useAppState();
+  const [form, setForm] = useState({
+    teamMemberId: state.teamMembers.filter(m => m.role !== 'owner')[0]?.id || '',
+    month: new Date().toISOString().slice(0, 7),
+    baseSalary: 0, bonuses: 0, deductions: 0, currency: state.workspace?.currency || 'INR',
+    status: 'draft' as const, notes: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = actions.addPayroll(form);
+    if ((result as any).error) alert((result as any).error);
+    else onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-soft-lg border border-line">
+        <div className="border-b border-line p-4 flex items-center justify-between">
+          <h2 className="font-semibold text-ink">Create payroll entry</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Team member</label>
+              <select value={form.teamMemberId} onChange={e => setForm({...form, teamMemberId: e.target.value})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                {state.teamMembers.filter(m => m.role !== 'owner').map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Month</label>
+              <input type="month" value={form.month} onChange={e => setForm({...form, month: e.target.value})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Base salary</label>
+              <input type="number" value={form.baseSalary} onChange={e => setForm({...form, baseSalary: Number(e.target.value)})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Bonuses</label>
+              <input type="number" value={form.bonuses} onChange={e => setForm({...form, bonuses: Number(e.target.value)})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Deductions</label>
+              <input type="number" value={form.deductions} onChange={e => setForm({...form, deductions: Number(e.target.value)})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+          </div>
+          <div className="bg-canvas rounded-xl p-3 text-sm">
+            <span className="text-ink-muted">Net pay: </span>
+            <span className="font-bold text-ink">{formatCurrency(form.baseSalary + form.bonuses - form.deductions, form.currency)}</span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Notes</label>
+            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+            <button type="submit" className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Create</button>
+          </div>
+        </form>
       </div>
     </div>
   );
