@@ -123,26 +123,35 @@ export function MarketingSite({ onSignIn, onStartFree }: { onSignIn: () => void;
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden bg-gradient-to-b from-bone to-cream">
         <div className="max-w-7xl mx-auto px-4 py-20 lg:py-32">
           <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-200 mb-6">
+              <Zap size={16} className="text-primary-600" />
+              <span className="text-sm font-medium text-primary-700">Trusted by 2,000+ agencies worldwide</span>
+            </div>
             <h1 className="text-5xl lg:text-7xl font-bold text-ink leading-tight mb-6">
               Run every client from first enquiry to final{' '}
-              <span className="italic font-serif text-primary-600">payment</span>
+              <span className="italic font-serif text-primary-600 relative">
+                payment
+                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" fill="none">
+                  <path d="M0 7C50 7 50 1 100 1C150 1 150 7 200 7" stroke="#ea580c" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </span>
             </h1>
-            <p className="text-xl text-ink-muted mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-ink-muted mb-8 max-w-2xl mx-auto leading-relaxed">
               One login for leads, quotes, e-signed contracts, projects, your client portal, invoices and payment tracking. 
               Built for agencies and established freelancers, in about 30 currencies, with GST-compliant invoicing in India.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
               <button 
                 onClick={onStartFree}
-                className="px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white text-lg font-semibold rounded-xl shadow-ember transition-all"
+                className="px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white text-lg font-semibold rounded-xl shadow-ember transition-all hover:shadow-lift-2 hover:-translate-y-0.5"
               >
-                Start free
+                Start free — no card required
               </button>
-              <button className="px-8 py-4 border-2 border-line hover:border-ink text-ink text-lg font-semibold rounded-xl transition-all">
-                See how it works
+              <button className="px-8 py-4 border-2 border-line hover:border-ink text-ink text-lg font-semibold rounded-xl transition-all hover:bg-surface">
+                See how it works →
               </button>
             </div>
             <p className="text-sm text-ink-faint mb-8">
@@ -150,70 +159,93 @@ export function MarketingSite({ onSignIn, onStartFree }: { onSignIn: () => void;
               <a href="#terms" className="text-primary-600 hover:underline">Terms</a> and{' '}
               <a href="#privacy" className="text-primary-600 hover:underline">Privacy Policy</a>
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-ink-muted">
-              <span className="flex items-center gap-1.5"><Shield size={16} /> Encrypted in transit</span>
-              <span className="flex items-center gap-1.5"><Shield size={16} /> Per-account data isolation</span>
-              <span className="flex items-center gap-1.5"><Shield size={16} /> Export anytime</span>
-              <span className="flex items-center gap-1.5"><Shield size={16} /> No card required</span>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-ink-muted">
+              <span className="flex items-center gap-1.5"><Shield size={16} className="text-green-600" /> Encrypted in transit</span>
+              <span className="flex items-center gap-1.5"><Shield size={16} className="text-green-600" /> Per-account data isolation</span>
+              <span className="flex items-center gap-1.5"><Shield size={16} className="text-green-600" /> Export anytime</span>
+              <span className="flex items-center gap-1.5"><Shield size={16} className="text-green-600" /> No card required</span>
             </div>
           </div>
         </div>
 
         {/* Dashboard Preview */}
-        <div className="max-w-6xl mx-auto px-4 pb-20">
-          <div className="bg-surface rounded-2xl border border-line shadow-soft-lg p-6 animate-float">
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-canvas rounded-xl p-4">
-                <div className="text-xs text-ink-muted mb-1">Revenue</div>
-                <div className="text-2xl font-bold text-ink">₹4,50,000</div>
-                <div className="text-xs text-green-600">+12% this month</div>
+        <div className="max-w-6xl mx-auto px-4 pb-20 relative">
+          <div className="absolute inset-0 bg-gradient-to-t from-bone via-transparent to-transparent z-10 pointer-events-none"></div>
+          <div className="bg-surface rounded-2xl border border-line shadow-lift-3 p-6 animate-float-slow">
+            {/* Browser Chrome */}
+            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-line">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
               </div>
-              <div className="bg-canvas rounded-xl p-4">
+              <div className="flex-1 bg-canvas rounded-lg px-3 py-1.5 text-xs text-ink-faint font-mono">
+                app.clientertap.com/dashboard
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-4 border border-primary-200">
+                <div className="text-xs text-primary-700 mb-1 font-medium">Revenue</div>
+                <div className="text-2xl font-bold text-ink">₹4,50,000</div>
+                <div className="text-xs text-green-600 font-medium mt-1">↑ 12% this month</div>
+              </div>
+              <div className="bg-canvas rounded-xl p-4 border border-line">
                 <div className="text-xs text-ink-muted mb-1">Active Projects</div>
                 <div className="text-2xl font-bold text-ink">12</div>
-                <div className="text-xs text-ink-faint">3 due this week</div>
+                <div className="text-xs text-ink-faint mt-1">3 due this week</div>
               </div>
-              <div className="bg-canvas rounded-xl p-4">
+              <div className="bg-canvas rounded-xl p-4 border border-line">
                 <div className="text-xs text-ink-muted mb-1">Open Leads</div>
                 <div className="text-2xl font-bold text-ink">8</div>
-                <div className="text-xs text-ink-faint">₹2.5L pipeline</div>
+                <div className="text-xs text-ink-faint mt-1">₹2.5L pipeline</div>
               </div>
-              <div className="bg-canvas rounded-xl p-4">
+              <div className="bg-canvas rounded-xl p-4 border border-line">
                 <div className="text-xs text-ink-muted mb-1">Win Rate</div>
                 <div className="text-2xl font-bold text-ink">68%</div>
-                <div className="text-xs text-green-600">+5% vs last month</div>
+                <div className="text-xs text-green-600 font-medium mt-1">↑ 5% vs last month</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-canvas rounded-xl p-4">
+              <div className="bg-canvas rounded-xl p-4 border border-line">
                 <div className="text-sm font-semibold text-ink mb-3">Sales Pipeline</div>
-                <div className="space-y-2">
-                  {['New', 'Contacted', 'Qualified', 'Won'].map((stage, i) => (
+                <div className="space-y-3">
+                  {[
+                    { stage: 'New', count: 4, color: 'bg-blue-500' },
+                    { stage: 'Contacted', count: 6, color: 'bg-amber-500' },
+                    { stage: 'Qualified', count: 8, color: 'bg-purple-500' },
+                    { stage: 'Won', count: 12, color: 'bg-green-500' }
+                  ].map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <div className="w-20 text-xs text-ink-muted">{stage}</div>
+                      <div className={`w-2 h-2 rounded-full ${item.color}`}></div>
+                      <div className="w-20 text-xs text-ink-muted">{item.stage}</div>
                       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary-600 rounded-full"
-                          style={{ width: `${[40, 60, 80, 100][i]}%` }}
+                          className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                          style={{ width: `${(item.count / 12) * 100}%` }}
                         />
                       </div>
-                      <div className="text-xs text-ink font-medium w-8">{[4, 6, 8, 12][i]}</div>
+                      <div className="text-xs text-ink font-semibold w-8">{item.count}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="bg-canvas rounded-xl p-4">
+              <div className="bg-canvas rounded-xl p-4 border border-line">
                 <div className="text-sm font-semibold text-ink mb-3">Recent Activity</div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {[
-                    { icon: CreditCard, text: 'Payment received from Nova Studio', time: '2h ago' },
-                    { icon: FileText, text: 'Invoice sent to Acme Corp', time: '4h ago' },
-                    { icon: Users, text: 'New lead from marketplace', time: '6h ago' },
+                    { icon: CreditCard, text: 'Payment received from Nova Studio', time: '2h ago', color: 'text-green-600 bg-green-50' },
+                    { icon: FileText, text: 'Invoice sent to Acme Corp', time: '4h ago', color: 'text-blue-600 bg-blue-50' },
+                    { icon: Users, text: 'New lead from marketplace', time: '6h ago', color: 'text-purple-600 bg-purple-50' },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <item.icon size={14} className="text-primary-600" />
-                      <span className="flex-1 text-ink">{item.text}</span>
-                      <span className="text-ink-faint">{item.time}</span>
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.color}`}>
+                        <item.icon size={14} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-ink font-medium">{item.text}</div>
+                        <div className="text-xs text-ink-faint">{item.time}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -286,34 +318,79 @@ export function MarketingSite({ onSignIn, onStartFree }: { onSignIn: () => void;
           <p className="text-center text-ink-muted mb-12 max-w-2xl mx-auto">
             Follow a client's journey from first enquiry to final payment — all in one place.
           </p>
-          <div className="space-y-8">
+          <div className="space-y-6">
             {[
-              { act: 'I', title: 'The Lead', desc: 'Capture leads from website, ads, or marketplace. Track in pipeline.' },
-              { act: 'II', title: 'The Client', desc: 'Convert won leads to clients. Send proposals and e-signed contracts.' },
-              { act: 'III', title: 'The Work', desc: 'Manage projects with timelines, tasks, and file sharing.' },
-              { act: 'IV', title: 'Her Side', desc: 'Client portal for updates, approvals, invoices, and messaging.' },
-              { act: 'V', title: 'The Loop', desc: 'Collect verified reviews, get referrals, and grow your business.' },
+              { 
+                act: 'I', 
+                title: 'The Lead', 
+                desc: 'Capture leads from website, ads, or marketplace. Track in pipeline.',
+                mockup: '📊 Lead Pipeline View',
+                features: ['Auto-capture from forms', 'Drag-and-drop stages', 'Source tracking']
+              },
+              { 
+                act: 'II', 
+                title: 'The Client', 
+                desc: 'Convert won leads to clients. Send proposals and e-signed contracts.',
+                mockup: '📝 Proposal & Contract',
+                features: ['One-click conversion', 'AI-written proposals', 'E-signature built-in']
+              },
+              { 
+                act: 'III', 
+                title: 'The Work', 
+                desc: 'Manage projects with timelines, tasks, and file sharing.',
+                mockup: '📋 Project Dashboard',
+                features: ['Kanban boards', 'Time tracking', 'Client file sharing']
+              },
+              { 
+                act: 'IV', 
+                title: 'Her Side', 
+                desc: 'Client portal for updates, approvals, invoices, and messaging.',
+                mockup: '🌐 Client Portal',
+                features: ['White-label branding', 'Real-time messaging', 'Invoice downloads']
+              },
+              { 
+                act: 'V', 
+                title: 'The Loop', 
+                desc: 'Collect verified reviews, get referrals, and grow your business.',
+                mockup: '⭐ Review Collection',
+                features: ['Auto-review requests', 'Public review page', 'Referral tracking']
+              },
             ].map((item, i) => (
-              <div key={i} className="bg-surface rounded-2xl border border-line p-6 flex items-start gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-primary-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                  {item.act}
+              <div key={i} className="bg-surface rounded-2xl border border-line p-8 flex flex-col md:flex-row items-start gap-6 hover:shadow-lift-1 transition-shadow">
+                <div className="flex-shrink-0">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white text-3xl font-bold shadow-ember">
+                    {item.act}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-ink mb-2">{item.title}</h3>
-                  <p className="text-ink-muted">{item.desc}</p>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-ink mb-2">{item.title}</h3>
+                  <p className="text-ink-muted mb-4">{item.desc}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {item.features.map((feature, j) => (
+                      <span key={j} className="px-3 py-1 bg-primary-50 text-primary-700 text-sm font-medium rounded-full">
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-shrink-0 w-full md:w-64">
+                  <div className="bg-gradient-to-br from-canvas to-surface rounded-xl border border-line p-4 text-center">
+                    <div className="text-4xl mb-2">{item.mockup.split(' ')[0]}</div>
+                    <div className="text-sm font-medium text-ink">{item.mockup.split(' ').slice(1).join(' ')}</div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="text-center mt-12">
-            <p className="text-2xl font-bold text-ink mb-6">
-              One client. Not one spreadsheet.
+          <div className="text-center mt-16">
+            <p className="text-3xl font-bold text-ink mb-6">
+              One client. <span className="italic font-serif text-primary-600">Not one spreadsheet.</span>
             </p>
             <button 
               onClick={onStartFree}
-              className="px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white text-lg font-semibold rounded-xl shadow-ember"
+              className="px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white text-lg font-semibold rounded-xl shadow-ember hover:shadow-lift-2 hover:-translate-y-0.5 transition-all"
             >
-              Start free
+              Start free — no card required
             </button>
           </div>
         </div>

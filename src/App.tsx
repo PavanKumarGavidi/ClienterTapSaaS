@@ -177,7 +177,7 @@ function Sidebar({ currentPage, onNavigate, collapsed, onToggle }: {
 
   if (collapsed) {
     return (
-      <div className="hidden lg:flex flex-col w-16 bg-surface border-r border-line py-4 items-center">
+      <div className="hidden lg:flex flex-col w-16 bg-surface border-r border-line py-4 items-center sticky top-0 h-screen overflow-y-auto">
         <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center mb-6 cursor-pointer" onClick={onToggle}>
           <span className="text-white font-bold text-sm">C</span>
         </div>
@@ -192,7 +192,7 @@ function Sidebar({ currentPage, onNavigate, collapsed, onToggle }: {
   }
 
   return (
-    <div className="hidden lg:flex flex-col w-60 bg-surface border-r border-line py-4">
+    <div className="hidden lg:flex flex-col w-60 bg-surface border-r border-line py-4 sticky top-0 h-screen overflow-y-auto">
       <div className="px-4 mb-6 flex items-center gap-2">
         <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center flex-shrink-0">
           <span className="text-white font-bold text-sm">C</span>

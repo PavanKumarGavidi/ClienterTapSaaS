@@ -145,15 +145,32 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
     
     // Simulate Google OAuth flow
     // In production, this would redirect to Google OAuth consent screen
-    // For demo, we simulate a successful Google login
+    // For demo, we simulate a successful Google login with realistic user data
     
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Simulate Google user data
+    // Realistic Google user data (simulating actual Google account info)
+    const realisticNames = [
+      'Sarah Johnson',
+      'Michael Chen',
+      'Emily Rodriguez',
+      'David Kim',
+      'Jessica Martinez',
+      'James Wilson',
+      'Amanda Thompson',
+      'Robert Taylor',
+      'Lisa Anderson',
+      'Christopher Lee'
+    ];
+    
+    const selectedName = realisticNames[Math.floor(Math.random() * realisticNames.length)];
+    const nameParts = selectedName.toLowerCase().split(' ');
+    const emailPrefix = `${nameParts[0]}.${nameParts[1]}${Math.floor(Math.random() * 100)}`;
+    
     const googleUser = {
-      name: 'Google User',
-      email: `user${Math.floor(Math.random() * 1000)}@gmail.com`,
-      picture: `https://ui-avatars.com/api/?name=Google+User&background=4285F4&color=fff`
+      name: selectedName,
+      email: `${emailPrefix}@gmail.com`,
+      picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedName)}&background=4285F4&color=fff&size=128`
     };
     
     // Check if this is login or signup mode
@@ -163,7 +180,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
       onAuth();
     } else {
       // For signup, create a new workspace with Google user data
-      const workspaceName = `${googleUser.name}'s Workspace`;
+      const workspaceName = `${selectedName.split(' ')[0]}'s Agency`;
       const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       
       actions.signup({
