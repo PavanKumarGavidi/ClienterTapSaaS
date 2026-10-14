@@ -10,6 +10,9 @@ export interface Workspace {
   gstin?: string;
   plan: Plan;
   brandColor?: string;
+  whiteLabel?: WhiteLabelConfig;
+  customDomain?: CustomDomain;
+  marketplaceProfile?: MarketplaceProfile;
   createdAt: string;
 }
 
@@ -364,6 +367,78 @@ export interface NotificationPreference {
   taskReminders: boolean;
 }
 
+// Phase 7 — Growth types
+export interface MarketplaceProfile {
+  id: string;
+  workspaceId: string;
+  agencyName: string;
+  tagline: string;
+  description: string;
+  services: string[];
+  location: string;
+  website?: string;
+  logo?: string;
+  portfolio: { title: string; description: string; imageUrl?: string }[];
+  isListed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceEnquiry {
+  id: string;
+  workspaceId: string;
+  agencyId: string;
+  fromName: string;
+  fromEmail: string;
+  fromCompany: string;
+  message: string;
+  services: string[];
+  budget?: string;
+  status: 'new' | 'contacted' | 'qualified' | 'closed';
+  leadId?: string;
+  createdAt: string;
+}
+
+export type IntegrationType = 'meta' | 'google_ads' | 'indiamart' | 'webhook';
+export type IntegrationStatus = 'disconnected' | 'connected' | 'error';
+
+export interface Integration {
+  id: string;
+  workspaceId: string;
+  type: IntegrationType;
+  name: string;
+  status: IntegrationStatus;
+  config: Record<string, any>;
+  fieldMapping?: Record<string, string>;
+  lastSyncAt?: string;
+  lastError?: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  connectedAt?: string;
+  createdAt: string;
+}
+
+export interface CustomDomain {
+  id: string;
+  workspaceId: string;
+  domain: string;
+  status: 'pending' | 'verifying' | 'verified' | 'active' | 'failed';
+  dnsRecords: { type: string; name: string; value: string }[];
+  verifiedAt?: string;
+  sslStatus: 'pending' | 'active' | 'failed';
+  createdAt: string;
+}
+
+export interface WhiteLabelConfig {
+  workspaceId: string;
+  brandColor: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  companyName?: string;
+  hidePoweredBy: boolean;
+  customEmail?: string;
+}
+
 // Phase 5 — Documents types
 export type DocumentType = 'proposal' | 'contract' | 'quotation' | 'nda' | 'other';
 export type DocumentStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired';
@@ -496,6 +571,9 @@ export interface AppState {
   payslips: Payslip[];
   pushSubscriptions: PushSubscription[];
   notificationPreferences: NotificationPreference[];
+  // Phase 7 — Growth
+  integrations: Integration[];
+  marketplaceEnquiries: MarketplaceEnquiry[];
 }
 
 export const PLAN_LIMITS: Record<Plan, {

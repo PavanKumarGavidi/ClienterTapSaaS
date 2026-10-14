@@ -1,6 +1,6 @@
 # ClienterTap — Feature Parity Checklist
 
-> Last updated: Phase 1-6 (Foundations + Core CRM + Money + Portal + Documents + Scheduling & Team)
+> Last updated: Phase 1-7 (Foundations + Core CRM + Money + Portal + Documents + Scheduling & Team + Growth)
 > Status key: ✅ Built | 🧪 Tested | ⏳ Not started | 🚫 Blocked
 
 ## P1 — Foundations
@@ -149,16 +149,35 @@
 | 81 | Notification preferences | Settings | ✅ Built | Per-channel toggles |
 | 82 | Meeting history on client | Client drawer | ✅ Built | Linked by clientId |
 
-## P7 — Growth
+## P7 — Growth ✅ COMPLETE
 
 | # | Feature | Page/Route | Status | Notes |
 |---|---------|-----------|--------|-------|
-| 70 | Verified reviews | — | ⏳ Not started | |
-| 71 | Referrals | — | ⏳ Not started | |
-| 72 | Marketplace | — | ⏳ Not started | |
-| 73 | Lead integrations (Meta, Google Ads, IndiaMART) | — | ⏳ Not started | Needs API keys |
-| 74 | White label | — | ⏳ Not started | Ultra feature |
-| 75 | Custom domain | — | ⏳ Not started | Ultra feature |
+| 70 | Verified reviews — public page | /r/<slug> | ✅ Built | Rating summary, review list, embed badge |
+| 71 | Verified reviews — embed badge | PublicReviewsPage | ✅ Built | Iframe embed code with copy button |
+| 72 | Verified reviews — agency reply | Reviews tab | ✅ Built | Reply to verified reviews |
+| 73 | Verified reviews — schema.org markup | PublicReviewsPage | ✅ Built | AggregateRating JSON-LD |
+| 74 | Referrals — tracking | Portal > Refer | ✅ Built | Referral form, status tracking |
+| 75 | Referrals — auto-creates lead | Store action | ✅ Built | Source = Referral |
+| 76 | Marketplace — profile editor | Growth > Marketplace | ✅ Built | Tagline, description, services, location |
+| 77 | Marketplace — listing toggle | Growth > Marketplace | ✅ Built | isListed flag |
+| 78 | Marketplace — enquiries | Growth > Marketplace | ✅ Built | Enquiry list with status |
+| 79 | Marketplace — enquiry → lead | Store action | ✅ Built | Auto-creates lead with source = Marketplace |
+| 80 | Lead integrations — Meta | Growth > Integrations | ✅ Built | Page token + page ID config |
+| 81 | Lead integrations — Google Ads | Growth > Integrations | ✅ Built | Developer token + customer ID |
+| 82 | Lead integrations — IndiaMART | Growth > Integrations | ✅ Built | API key config |
+| 83 | Lead integrations — Webhook | Growth > Integrations | ✅ Built | Auto-generated URL + secret, test-send |
+| 84 | Lead integrations — Ultra-only gating | Growth > Integrations | ✅ Built | Upgrade prompt for non-Ultra |
+| 85 | White label — brand color picker | Growth > White Label | ✅ Built | Color input + preset swatches |
+| 86 | White label — company name | Growth > White Label | ✅ Built | Custom company name |
+| 87 | White label — hide "Powered by" | Growth > White Label | ✅ Built | Toggle for branding removal |
+| 88 | White label — Ultra-only gating | Growth > White Label | ✅ Built | Upgrade prompt for non-Ultra |
+| 89 | Custom domain — add domain | Growth > Custom Domain | ✅ Built | Domain input with validation |
+| 90 | Custom domain — DNS records | Growth > Custom Domain | ✅ Built | CNAME + TXT records with copy |
+| 91 | Custom domain — verification | Growth > Custom Domain | ✅ Built | Verify button, status tracking |
+| 92 | Custom domain — SSL status | Growth > Custom Domain | ✅ Built | SSL status indicator |
+| 93 | Custom domain — remove | Growth > Custom Domain | ✅ Built | Remove with confirmation |
+| 94 | Custom domain — Ultra-only gating | Growth > Custom Domain | ✅ Built | Upgrade prompt for non-Ultra |
 
 ## P8 — Public Site & Billing
 

@@ -1,4 +1,4 @@
-import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral, Document, DocumentTemplate, Signature, IntakeForm, IntakeResponse, TeamMember, TeamInvite, Payroll, Payslip, PushSubscription, NotificationPreference, TeamRole, Permission } from './types';
+import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral, Document, DocumentTemplate, Signature, IntakeForm, IntakeResponse, TeamMember, TeamInvite, Payroll, Payslip, PushSubscription, NotificationPreference, TeamRole, Permission, Integration, IntegrationType, MarketplaceEnquiry, MarketplaceProfile, CustomDomain, WhiteLabelConfig } from './types';
 import { v4 as uuid } from 'uuid';
 
 const STORAGE_KEY = 'clientertap_state';
@@ -171,6 +171,20 @@ function createDefaultState(): AppState {
   const notificationPreferences: NotificationPreference[] = [
     { id: 'np-1', workspaceId: wsId, userId, email: true, push: true, meetingReminders: true, paymentAlerts: true, leadFollowups: true, taskReminders: true },
   ];
+  // Phase 7 — Growth seed data
+  const integrations: Integration[] = [
+    {
+      id: 'int-1', workspaceId: wsId, type: 'webhook', name: 'Website Contact Form',
+      status: 'connected', config: { url: 'https://novacreative.com/contact' },
+      fieldMapping: { name: 'full_name', email: 'email_address', phone: 'phone', message: 'message' },
+      webhookUrl: 'https://api.clientertap.com/webhooks/nova-creative/abc123',
+      webhookSecret: 'whsec_' + uuid().slice(0, 16),
+      lastSyncAt: new Date(Date.now() - 3600000).toISOString(),
+      connectedAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+      createdAt: now
+    },
+  ];
+  const marketplaceEnquiries: MarketplaceEnquiry[] = [];
   return {
     isAuthenticated: true,
     currentUserId: userId,
@@ -181,6 +195,7 @@ function createDefaultState(): AppState {
     portalUsers, currentPortalUserId: null, messageThreads, messages, files, projectUpdates, reviews, referrals,
     documents, documentTemplates, signatures, intakeForms, intakeResponses,
     teamMembers, teamInvites, payroll, payslips, pushSubscriptions, notificationPreferences,
+    integrations, marketplaceEnquiries,
   };
 }
 
@@ -944,6 +959,226 @@ export const actions = {
     state = { ...state, payslips: [...state.payslips, payslip] };
     saveState();
     return { success: true, payslipId: payslip.id, pdfUrl: payslip.pdfUrl };
+  },
+
+  // Phase 7 — Growth actions
+  
+  // White Label
+  updateWhiteLabel(config: Partial<WhiteLabelConfig>) {
+    if (state.workspace?.plan !== 'ultra') {
+      return { error: 'White label is only available on Ultra plan' };
+    }
+    state = {
+      ...state,
+      workspace: {
+        ...state.workspace!,
+        whiteLabel: { ...state.workspace!.whiteLabel, ...config } as WhiteLabelConfig,
+        brandColor: config.brandColor || state.workspace!.brandColor
+      }
+    };
+    saveState();
+    return { success: true };
+  },
+
+  // Custom Domain
+  addCustomDomain(domain: string) {
+    if (state.workspace?.plan !== 'ultra') {
+      return { error: 'Custom domains are only available on Ultra plan' };
+    }
+    const customDomain: CustomDomain = {
+      id: 'cd-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      domain,
+      status: 'pending',
+      dnsRecords: [
+        { type: 'CNAME', name: 'portal', value: 'portal.clientertap.com' },
+        { type: 'TXT', name: '_verify', value: 'clientertap-verify=' + uuid().slice(0, 16) }
+      ],
+      sslStatus: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    state = {
+      ...state,
+      workspace: { ...state.workspace!, customDomain }
+    };
+    saveState();
+    return { success: true, domainId: customDomain.id };
+  },
+
+  verifyCustomDomain() {
+    if (!state.workspace?.customDomain) return { error: 'No custom domain configured' };
+    // Simulate verification (in production would check DNS)
+    state = {
+      ...state,
+      workspace: {
+        ...state.workspace!,
+        customDomain: {
+          ...state.workspace!.customDomain,
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+          sslStatus: 'active'
+        }
+      }
+    };
+    saveState();
+    return { success: true };
+  },
+
+  removeCustomDomain() {
+    state = {
+      ...state,
+      workspace: { ...state.workspace!, customDomain: undefined }
+    };
+    saveState();
+    return { success: true };
+  },
+
+  // Marketplace
+  updateMarketplaceProfile(profile: Partial<MarketplaceProfile>) {
+    if (!state.workspace?.marketplaceProfile) {
+      const newProfile: MarketplaceProfile = {
+        id: 'mp-' + uuid().slice(0, 8),
+        workspaceId: state.workspace!.id,
+        agencyName: state.workspace!.name,
+        tagline: '',
+        description: '',
+        services: [],
+        location: '',
+        portfolio: [],
+        isListed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...profile
+      };
+      state = {
+        ...state,
+        workspace: { ...state.workspace!, marketplaceProfile: newProfile }
+      };
+    } else {
+      state = {
+        ...state,
+        workspace: {
+          ...state.workspace!,
+          marketplaceProfile: {
+            ...state.workspace!.marketplaceProfile,
+            ...profile,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      };
+    }
+    saveState();
+    return { success: true };
+  },
+
+  addMarketplaceEnquiry(enquiry: Omit<MarketplaceEnquiry, 'id' | 'workspaceId' | 'createdAt' | 'status'>) {
+    const newEnquiry: MarketplaceEnquiry = {
+      ...enquiry,
+      id: 'mke-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      status: 'new',
+      createdAt: new Date().toISOString()
+    };
+    state = { ...state, marketplaceEnquiries: [...state.marketplaceEnquiries, newEnquiry] };
+    // Auto-create lead
+    const leadResult = actions.addLead({
+      name: enquiry.fromName,
+      company: enquiry.fromCompany,
+      email: enquiry.fromEmail,
+      phone: '',
+      source: 'Marketplace',
+      stageId: state.stages[0]?.id || '',
+      estimatedValue: 0,
+      currency: state.workspace?.currency || 'INR',
+      notes: `Marketplace enquiry: ${enquiry.message}`,
+      assignedTo: state.currentUserId || '',
+      isWon: false,
+      isLost: false
+    });
+    if ((leadResult as any).success) {
+      const lastLead = state.leads[state.leads.length - 1];
+      state = {
+        ...state,
+        marketplaceEnquiries: state.marketplaceEnquiries.map(e => 
+          e.id === newEnquiry.id ? { ...e, leadId: lastLead.id } : e
+        )
+      };
+    }
+    saveState();
+    return { success: true, enquiryId: newEnquiry.id };
+  },
+
+  updateMarketplaceEnquiry(id: string, updates: Partial<MarketplaceEnquiry>) {
+    state = {
+      ...state,
+      marketplaceEnquiries: state.marketplaceEnquiries.map(e => e.id === id ? { ...e, ...updates } : e)
+    };
+    saveState();
+  },
+
+  // Integrations
+  connectIntegration(type: IntegrationType, config: Record<string, any>) {
+    if (state.workspace?.plan !== 'ultra') {
+      return { error: 'Lead integrations are only available on Ultra plan' };
+    }
+    const integration: Integration = {
+      id: 'int-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      type,
+      name: type === 'meta' ? 'Meta Lead Ads' : type === 'google_ads' ? 'Google Ads' : type === 'indiamart' ? 'IndiaMART' : 'Webhook',
+      status: 'connected',
+      config,
+      connectedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+    if (type === 'webhook') {
+      integration.webhookUrl = `https://api.clientertap.com/webhooks/${state.workspace!.slug}/${uuid().slice(0, 8)}`;
+      integration.webhookSecret = 'whsec_' + uuid().slice(0, 16);
+    }
+    state = { ...state, integrations: [...state.integrations, integration] };
+    addActivity('integration_connected', `Connected ${integration.name}`, 'integration', integration.id);
+    saveState();
+    return { success: true, integrationId: integration.id };
+  },
+
+  disconnectIntegration(id: string) {
+    state = { ...state, integrations: state.integrations.filter(i => i.id !== id) };
+    saveState();
+    return { success: true };
+  },
+
+  updateIntegration(id: string, updates: Partial<Integration>) {
+    state = {
+      ...state,
+      integrations: state.integrations.map(i => i.id === id ? { ...i, ...updates } : i)
+    };
+    saveState();
+  },
+
+  testWebhook(id: string) {
+    const integration = state.integrations.find(i => i.id === id);
+    if (!integration || integration.type !== 'webhook') {
+      return { error: 'Integration not found or not a webhook' };
+    }
+    // Simulate test (in production would send actual HTTP request)
+    state = {
+      ...state,
+      integrations: state.integrations.map(i => 
+        i.id === id ? { ...i, lastSyncAt: new Date().toISOString(), lastError: undefined } : i
+      )
+    };
+    saveState();
+    return { success: true, message: 'Test webhook sent successfully' };
+  },
+
+  // Reviews
+  addAgencyReply(reviewId: string, reply: string) {
+    state = {
+      ...state,
+      reviews: state.reviews.map(r => r.id === reviewId ? { ...r, agencyReply: reply } : r)
+    };
+    saveState();
+    return { success: true };
   },
 
   // Reset

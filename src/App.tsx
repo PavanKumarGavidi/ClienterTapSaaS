@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 import { getState, subscribe, actions } from './lib/store';
 import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES, DocumentType, IntakeFormField, IntakeFieldType, Meeting, TeamRole, Permission } from './lib/types';
 import PortalApp from './PortalApp';
+import { GrowthSettingsPage, PublicReviewsPage } from './GrowthPages';
 import {
   LayoutDashboard, Users, UserCircle, FolderKanban, CreditCard, MessageSquare,
   Calendar, CheckSquare, FileText, UserPlus, Settings, Activity, Bell, Search,
@@ -165,6 +166,7 @@ function Sidebar({ currentPage, onNavigate, collapsed, onToggle }: {
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'documents', label: 'Documents', icon: FileText },
     { id: 'team', label: 'Team', icon: UserPlus },
+    { id: 'growth', label: 'Growth', icon: Zap },
     { id: 'portal', label: 'Client Portal', icon: Globe },
     { id: 'activity', label: 'Activity', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -3472,6 +3474,8 @@ export default function App() {
       case 'team': return <TeamPage />;
       case 'activity': return <ActivityPage />;
       case 'portal': return <PortalManagePage />;
+      case 'growth': return <GrowthSettingsPage />;
+      case 'reviews': return <PublicReviewsPage slug={state.workspace?.slug || ''} />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardPage />;
     }
