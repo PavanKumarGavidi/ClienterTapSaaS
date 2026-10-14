@@ -191,6 +191,96 @@ export interface Notification {
   createdAt: string;
 }
 
+// Phase 4 — Portal types
+export interface PortalUser {
+  id: string;
+  workspaceId: string;
+  clientId: string;
+  email: string;
+  name: string;
+  token: string; // magic-link token
+  tempPassword?: string; // temporary password (hashed in production)
+  mustChangePassword: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+export interface MessageThread {
+  id: string;
+  workspaceId: string;
+  clientId: string;
+  subject: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Message {
+  id: string;
+  threadId: string;
+  workspaceId: string;
+  senderType: 'agency' | 'client';
+  senderId: string;
+  senderName: string;
+  body: string;
+  attachments: FileRecord[];
+  read: boolean;
+  createdAt: string;
+}
+
+export interface FileRecord {
+  id: string;
+  workspaceId: string;
+  clientId?: string;
+  projectId?: string;
+  name: string;
+  size: number; // bytes
+  mimeType: string;
+  sharedWithClient: boolean;
+  signedUrl?: string; // expires
+  uploadedBy: string;
+  createdAt: string;
+}
+
+export interface ProjectUpdate {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  title: string;
+  body: string;
+  attachments: FileRecord[];
+  requestSignOff: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+}
+
+export interface Review {
+  id: string;
+  workspaceId: string;
+  clientId: string;
+  projectId: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  text: string;
+  clientName: string;
+  verified: boolean;
+  agencyReply?: string;
+  createdAt: string;
+}
+
+export interface Referral {
+  id: string;
+  workspaceId: string;
+  referrerClientId: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  message: string;
+  leadId?: string;
+  status: 'pending' | 'contacted' | 'converted';
+  createdAt: string;
+}
+
 export interface AppState {
   isAuthenticated: boolean;
   currentUserId: string | null;
@@ -210,6 +300,15 @@ export interface AppState {
   aiQuotesUsed: number;
   aiQuotesResetDate: string;
   storageUsed: number;
+  // Phase 4 — Portal
+  portalUsers: PortalUser[];
+  currentPortalUserId: string | null; // null = not in portal
+  messageThreads: MessageThread[];
+  messages: Message[];
+  files: FileRecord[];
+  projectUpdates: ProjectUpdate[];
+  reviews: Review[];
+  referrals: Referral[];
 }
 
 export const PLAN_LIMITS: Record<Plan, {

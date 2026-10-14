@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { getState, subscribe, actions } from './lib/store';
 import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES } from './lib/types';
+import PortalApp from './PortalApp';
 import {
   LayoutDashboard, Users, UserCircle, FolderKanban, CreditCard, MessageSquare,
   Calendar, CheckSquare, FileText, UserPlus, Settings, Activity, Bell, Search,
   Menu, X, ChevronDown, ChevronRight, Plus, Filter, Download, Upload, Trash2,
   Mail, Phone, Building2, DollarSign, TrendingUp, Clock, Star, ArrowRight,
   LogOut, Eye, Edit, MoreVertical, GripVertical, AlertCircle, CheckCircle2,
-  ArrowUpRight, ArrowDownRight, Zap, Shield, Globe, Heart
+  ArrowUpRight, ArrowDownRight, Zap, Shield, Globe, Heart, ExternalLink
 } from 'lucide-react';
 
 // Store hook
@@ -164,6 +165,7 @@ function Sidebar({ currentPage, onNavigate, collapsed, onToggle }: {
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'documents', label: 'Documents', icon: FileText },
     { id: 'team', label: 'Team', icon: UserPlus },
+    { id: 'portal', label: 'Client Portal', icon: Globe },
     { id: 'activity', label: 'Activity', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -900,12 +902,46 @@ function ClientsPage() {
                 ))}
               </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  actions.updateClient(client.id, { portalEnabled: !client.portalEnabled });
-                }} className={`flex-1 py-2 text-sm font-medium rounded-xl border ${client.portalEnabled ? 'border-green-200 text-green-700 bg-green-50' : 'border-line text-ink hover:bg-canvas'}`}>
-                  {client.portalEnabled ? 'Portal Active ✓' : 'Enable Portal'}
-                </button>
+              <div className="space-y-2">
+                {!client.portalEnabled ? (
+                  <button onClick={() => {
+                    const result = actions.enablePortalForClient(client.id);
+                    if ((result as any).error) alert((result as any).error);
+                    else if ((result as any).success) {
+                      alert(`Portal enabled!\n\nMagic link token: ${(result as any).token}\nTemp password: ${(result as any).tempPassword}\n\nAn invite email would be sent to ${client.email}`);
+                    }
+                  }} className="w-full py-2 text-sm font-medium rounded-xl border border-line text-ink hover:bg-canvas">
+                    Enable Portal Access
+                  </button>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <button onClick={() => {
+                        // Simulate entering portal as this client
+                        const pu = state.portalUsers.find(p => p.clientId === client.id);
+                        if (pu) {
+                          actions.portalLogin(pu.token);
+                        }
+                      }} className="flex-1 py-2 text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700">
+                        Open Portal as Client
+                      </button>
+                      <button onClick={() => {
+                        if (confirm('Revoke portal access?')) {
+                          actions.disablePortalForClient(client.id);
+                        }
+                      }} className="py-2 px-3 text-sm font-medium rounded-xl border border-red-200 text-red-600 hover:bg-red-50">
+                        Revoke
+                      </button>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-3 text-xs text-green-800">
+                      <div className="font-medium mb-1">✓ Portal active</div>
+                      <div>Portal URL: portal.clientertap.com/{state.workspace?.slug}</div>
+                      {state.portalUsers.find(p => p.clientId === client.id)?.lastLoginAt && (
+                        <div className="mt-1">Last login: {new Date(state.portalUsers.find(p => p.clientId === client.id)!.lastLoginAt!).toLocaleString()}</div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1930,6 +1966,119 @@ function TeamPage() {
   );
 }
 
+// Portal Management Page (Agency side)
+function PortalManagePage() {
+  const state = useAppState();
+  const portalEnabledClients = state.clients.filter(c => c.portalEnabled);
+  const limits = PLAN_LIMITS[state.workspace?.plan || 'free'];
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold text-ink">Client Portal</h1>
+        <p className="text-ink-muted text-sm">Manage portal access for your clients</p>
+      </div>
+
+      <div className="bg-surface rounded-2xl border border-line p-5 shadow-soft">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-ink">Portal status</h3>
+            <p className="text-sm text-ink-muted">{portalEnabledClients.length} of {limits.portalClients === 99999 ? '∞' : limits.portalClients} portal seats used</p>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 font-medium">Active</span>
+        </div>
+        <div className="bg-canvas rounded-xl p-3 text-sm text-ink-muted">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe size={14} className="text-primary-600" />
+            <span className="font-medium text-ink">Portal URL</span>
+          </div>
+          <code className="text-xs text-primary-600">portal.clientertap.com/{state.workspace?.slug}</code>
+          {state.workspace?.plan === 'ultra' && (
+            <div className="mt-2 text-xs text-ink-faint">Ultra plan: Custom domain available (portal.youragency.com)</div>
+          )}
+          {state.workspace?.plan === 'free' && (
+            <div className="mt-2 text-xs text-ink-faint">Free plan: "Powered by ClienterTap" shown in portal footer</div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-ink mb-3">Clients with portal access</h2>
+        {portalEnabledClients.length === 0 ? (
+          <div className="bg-surface rounded-2xl border border-line p-8 text-center">
+            <Globe size={32} className="mx-auto mb-3 text-ink-faint opacity-50" />
+            <p className="text-sm text-ink-muted">No clients have portal access yet</p>
+            <p className="text-xs text-ink-faint mt-1">Go to Clients → Enable portal for a client</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {portalEnabledClients.map(c => {
+              const pu = state.portalUsers.find(p => p.clientId === c.id);
+              return (
+                <div key={c.id} className="bg-surface rounded-xl border border-line p-4 shadow-soft flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                    <span className="text-sm font-semibold text-primary-700">{c.name.charAt(0)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-ink">{c.name}</div>
+                    <div className="text-xs text-ink-faint">{c.email}</div>
+                  </div>
+                  <div className="text-right">
+                    {pu?.lastLoginAt ? (
+                      <div className="text-xs text-green-600">Last login: {timeAgo(pu.lastLoginAt)}</div>
+                    ) : (
+                      <div className="text-xs text-ink-faint">Never logged in</div>
+                    )}
+                  </div>
+                  <button onClick={() => {
+                    if (pu) {
+                      actions.portalLogin(pu.token);
+                    }
+                  }} className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg flex items-center gap-1">
+                    <ExternalLink size={12} /> Preview
+                  </button>
+                  <button onClick={() => {
+                    if (confirm('Revoke portal access for this client?')) {
+                      actions.disablePortalForClient(c.id);
+                    }
+                  }} className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50">
+                    Revoke
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Portal features list */}
+      <div className="bg-surface rounded-2xl border border-line p-5 shadow-soft">
+        <h3 className="font-semibold text-ink mb-3">What clients see in the portal</h3>
+        <div className="grid md:grid-cols-2 gap-3">
+          {[
+            { icon: FolderKanban, title: 'Projects', desc: 'View progress, updates, and deadlines' },
+            { icon: FileText, title: 'Invoices', desc: 'Download invoices and track payments' },
+            { icon: MessageSquare, title: 'Messages', desc: 'Real-time messaging with your team' },
+            { icon: CheckSquare, title: 'Approvals', desc: 'Review and sign off on project updates' },
+            { icon: Star, title: 'Reviews', desc: 'Leave verified reviews for completed projects' },
+            { icon: Heart, title: 'Referrals', desc: 'Refer friends and track referral status' },
+          ].map((f, i) => (
+            <div key={i} className="flex items-start gap-3 p-2">
+              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                <f.icon size={14} className="text-primary-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-ink">{f.title}</div>
+                <div className="text-xs text-ink-faint">{f.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Main App Component
 export default function App() {
   const state = useAppState();
@@ -1940,6 +2089,11 @@ export default function App() {
 
   if (!state.isAuthenticated) {
     return <AuthPage onAuth={() => {}} />;
+  }
+
+  // Phase 4 — Portal mode detection
+  if (state.currentPortalUserId) {
+    return <PortalApp onExit={() => {}} />;
   }
 
   const unreadCount = state.notifications.filter(n => !n.read).length;
@@ -1956,6 +2110,7 @@ export default function App() {
       case 'documents': return <DocumentsPage />;
       case 'team': return <TeamPage />;
       case 'activity': return <ActivityPage />;
+      case 'portal': return <PortalManagePage />;
       case 'settings': return <SettingsPage />;
       default: return <DashboardPage />;
     }

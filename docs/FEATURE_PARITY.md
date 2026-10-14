@@ -1,6 +1,6 @@
 # ClienterTap — Feature Parity Checklist
 
-> Last updated: Phase 1-3 (Foundations + Core CRM + Money)
+> Last updated: Phase 1-4 (Foundations + Core CRM + Money + Portal)
 > Status key: ✅ Built | 🧪 Tested | ⏳ Not started | 🚫 Blocked
 
 ## P1 — Foundations
@@ -74,14 +74,29 @@
 | 55 | Meetings — List & schedule | /meetings | ✅ Built | Calendar view, add form |
 | 56 | Multi-currency support | Global | ✅ Built | 30 currencies, formatCurrency util |
 
-## P4 — Portal
+## P4 — Portal ✅ COMPLETE
 
 | # | Feature | Page/Route | Status | Notes |
 |---|---------|-----------|--------|-------|
-| 57 | Client portal toggle | Client model | ✅ Built | Portal enabled flag |
-| 58 | Portal auth (magic link / temp password) | — | ⏳ Not started | Needs email integration |
-| 59 | Portal pages (Home, Projects, Invoices, Messages) | — | ⏳ Not started | |
-| 60 | Portal — Client data isolation | — | ⏳ Not started | |
+| 57 | Client portal toggle | Client model + Client drawer | ✅ Built | Enable/disable with token generation |
+| 58 | Portal auth — Magic link token | Portal Login | ✅ Built | Token-based login works |
+| 59 | Portal auth — Temp password | Portal Login | ✅ Built | Email + password login works |
+| 60 | Portal — Home page (projects, owed, attention) | Portal > Home | ✅ Built | Stats, attention items, running projects |
+| 61 | Portal — Projects page (detail, updates, files) | Portal > Projects | ✅ Built | Timeline, shared files, budget |
+| 62 | Portal — Project updates with sign-off | Portal > Projects | ✅ Built | Approve/reject updates, timestamp stored |
+| 63 | Portal — Shared files (signed links) | Portal > Projects | ✅ Built | Only shared files visible, download button |
+| 64 | Portal — Invoices page | Portal > Invoices | ✅ Built | Line items, status, outstanding balance |
+| 65 | Portal — Messages (live thread) | Portal > Messages | ✅ Built | Real-time thread, mark read, send |
+| 66 | Portal — Reviews (verified, immutable) | Portal > Reviews | ✅ Built | Star rating, text, verified badge |
+| 67 | Portal — Referrals (creates lead) | Portal > Refer | ✅ Built | Referral form, creates lead in pipeline |
+| 68 | Portal — Client data isolation | PortalApp | ✅ Built | Each client sees only their own data |
+| 69 | Portal — Branding (agency name/logo) | PortalLayout | ✅ Built | Uses workspace name and brand color |
+| 70 | Portal — "Powered by" footer (Free plan) | PortalLayout | ✅ Built | Only shown on free plan |
+| 71 | Portal — Agency preview mode | PortalLayout | ✅ Built | "Back to Agency" button when previewing |
+| 72 | Portal — Portal management page | /portal (agency) | ✅ Built | List portal clients, preview, revoke |
+| 73 | Portal — Portal limit enforcement | Store | ✅ Built | Counts against plan limit |
+| 74 | Portal — Invite email (simulated) | Client drawer | ✅ Built | Shows token/password on enable |
+| 75 | Portal — Last login tracking | PortalUser model | ✅ Built | Tracked and displayed |
 
 ## P5 — Documents
 

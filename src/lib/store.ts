@@ -1,4 +1,4 @@
-import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS } from './types';
+import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral } from './types';
 import { v4 as uuid } from 'uuid';
 
 const STORAGE_KEY = 'clientertap_state';
@@ -58,6 +58,31 @@ function createDefaultState(): AppState {
     { id: 'n1', workspaceId: wsId, userId, title: 'Meeting in 2 hours', message: 'Brand Review Call with Ananya Gupta at 2:00 PM', read: false, createdAt: now },
     { id: 'n2', workspaceId: wsId, userId, title: 'Payment received', message: '₹1,18,000 received from Nova Studio', read: true, createdAt: now },
   ];
+  // Phase 4 — Portal seed data
+  const portalUsers: PortalUser[] = [
+    { id: 'pu1', workspaceId: wsId, clientId: 'c1', email: 'ananya@novastudio.in', name: 'Ananya Gupta', token: 'portal-token-ananya-xyz', tempPassword: 'welcome123', mustChangePassword: true, createdAt: now },
+    { id: 'pu2', workspaceId: wsId, clientId: 'c2', email: 'david@acme.co', name: 'David Kim', token: 'portal-token-david-abc', tempPassword: 'welcome123', mustChangePassword: true, lastLoginAt: now, createdAt: now },
+  ];
+  const messageThreads: MessageThread[] = [
+    { id: 'mt1', workspaceId: wsId, clientId: 'c1', subject: 'Brand Redesign Discussion', createdAt: now, updatedAt: now },
+    { id: 'mt2', workspaceId: wsId, clientId: 'c2', subject: 'Website Maintenance Updates', createdAt: now, updatedAt: now },
+  ];
+  const messages: Message[] = [
+    { id: 'msg1', threadId: 'mt1', workspaceId: wsId, senderType: 'agency', senderId: userId, senderName: 'Vikram Singh', body: 'Hi Ananya, I have uploaded the first round of logo concepts for your review. Let me know your thoughts!', attachments: [], read: true, createdAt: now },
+    { id: 'msg2', threadId: 'mt1', workspaceId: wsId, senderType: 'client', senderId: 'pu1', senderName: 'Ananya Gupta', body: 'Thanks Vikram! I will review them this evening and get back to you.', attachments: [], read: true, createdAt: new Date(Date.now() + 3600000).toISOString() },
+    { id: 'msg3', threadId: 'mt2', workspaceId: wsId, senderType: 'agency', senderId: userId, senderName: 'Vikram Singh', body: 'Hi David, the March maintenance is complete. All plugins updated and security patches applied.', attachments: [], read: false, createdAt: now },
+  ];
+  const files: FileRecord[] = [
+    { id: 'f1', workspaceId: wsId, clientId: 'c1', projectId: 'p1', name: 'Logo_Concepts_v1.pdf', size: 2400000, mimeType: 'application/pdf', sharedWithClient: true, uploadedBy: userId, createdAt: now },
+    { id: 'f2', workspaceId: wsId, clientId: 'c1', projectId: 'p1', name: 'Brand_Guidelines_Draft.docx', size: 1800000, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', sharedWithClient: false, uploadedBy: userId, createdAt: now },
+    { id: 'f3', workspaceId: wsId, clientId: 'c2', projectId: 'p2', name: 'Maintenance_Report_March.pdf', size: 980000, mimeType: 'application/pdf', sharedWithClient: true, uploadedBy: userId, createdAt: now },
+  ];
+  const projectUpdates: ProjectUpdate[] = [
+    { id: 'upd1', workspaceId: wsId, projectId: 'p1', title: 'Logo concepts ready for review', body: 'We have completed the first round of logo concepts. Please review the attached PDF and let us know your top 2 choices.', attachments: [files[0]], requestSignOff: true, status: 'pending', createdAt: now },
+    { id: 'upd2', workspaceId: wsId, projectId: 'p2', title: 'March maintenance complete', body: 'All WordPress plugins updated to latest versions. Security patches applied. Site speed optimized.', attachments: [files[2]], requestSignOff: false, status: 'pending', createdAt: now },
+  ];
+  const reviews: Review[] = [];
+  const referrals: Referral[] = [];
   return {
     isAuthenticated: true,
     currentUserId: userId,
@@ -65,6 +90,7 @@ function createDefaultState(): AppState {
     users: [{ id: userId, workspaceId: wsId, name: 'Vikram Singh', email: 'vikram@nova.co', role: 'owner' }],
     leads, stages, clients, projects, invoices, payments, meetings, tasks, retainers, activities, notifications,
     aiQuotesUsed: 1, aiQuotesResetDate: '2026-04-01', storageUsed: 45,
+    portalUsers, currentPortalUserId: null, messageThreads, messages, files, projectUpdates, reviews, referrals,
   };
 }
 
@@ -310,6 +336,215 @@ export const actions = {
       state = { ...state, workspace: { ...state.workspace, plan } };
       saveState();
     }
+  },
+
+  // Phase 4 — Portal actions
+  enablePortalForClient(clientId: string) {
+    const client = state.clients.find(c => c.id === clientId);
+    if (!client) return { error: 'Client not found' };
+    const limits = PLAN_LIMITS[state.workspace!.plan];
+    const portalEnabledCount = state.clients.filter(c => c.portalEnabled).length;
+    if (portalEnabledCount >= limits.portalClients && !client.portalEnabled) {
+      return { error: 'Portal client limit reached. Upgrade your plan.' };
+    }
+    const token = 'pt-' + uuid().slice(0, 12);
+    const tempPassword = 'welcome' + Math.random().toString(36).slice(2, 8);
+    state = {
+      ...state,
+      clients: state.clients.map(c => c.id === clientId ? { ...c, portalEnabled: true, portalToken: token } : c),
+    };
+    // Create portal user if not exists
+    const existingPortalUser = state.portalUsers.find(pu => pu.clientId === clientId);
+    if (!existingPortalUser) {
+      const pu: PortalUser = {
+        id: 'pu-' + uuid().slice(0, 8),
+        workspaceId: state.workspace!.id,
+        clientId,
+        email: client.email,
+        name: client.name,
+        token,
+        tempPassword,
+        mustChangePassword: true,
+        createdAt: new Date().toISOString(),
+      };
+      state = { ...state, portalUsers: [...state.portalUsers, pu] };
+      // Create message thread
+      const thread: MessageThread = {
+        id: 'mt-' + uuid().slice(0, 8),
+        workspaceId: state.workspace!.id,
+        clientId,
+        subject: 'General',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      state = { ...state, messageThreads: [...state.messageThreads, thread] };
+    }
+    addActivity('portal_enabled', `Enabled portal for "${client.name}"`, 'client', clientId);
+    saveState();
+    return { success: true, token, tempPassword };
+  },
+
+  disablePortalForClient(clientId: string) {
+    state = {
+      ...state,
+      clients: state.clients.map(c => c.id === clientId ? { ...c, portalEnabled: false, portalToken: undefined } : c),
+    };
+    saveState();
+  },
+
+  portalLogin(tokenOrEmail: string, password?: string): { success: boolean; portalUserId?: string; error?: string } {
+    // Try token-based (magic link) login
+    const byToken = state.portalUsers.find(pu => pu.token === tokenOrEmail);
+    if (byToken) {
+      state = {
+        ...state,
+        currentPortalUserId: byToken.id,
+        portalUsers: state.portalUsers.map(pu => pu.id === byToken.id ? { ...pu, lastLoginAt: new Date().toISOString() } : pu),
+      };
+      saveState();
+      return { success: true, portalUserId: byToken.id };
+    }
+    // Try email + password login
+    const byEmail = state.portalUsers.find(pu => pu.email === tokenOrEmail);
+    if (byEmail && byEmail.tempPassword === password) {
+      state = {
+        ...state,
+        currentPortalUserId: byEmail.id,
+        portalUsers: state.portalUsers.map(pu => pu.id === byEmail.id ? { ...pu, lastLoginAt: new Date().toISOString() } : pu),
+      };
+      saveState();
+      return { success: true, portalUserId: byEmail.id };
+    }
+    return { success: false, error: 'Invalid credentials or portal not enabled for this client.' };
+  },
+
+  portalLogout() {
+    state = { ...state, currentPortalUserId: null };
+    saveState();
+  },
+
+  sendMessage(threadId: string, body: string, attachments: FileRecord[] = []) {
+    const pu = state.portalUsers.find(p => p.id === state.currentPortalUserId);
+    const isClient = !!pu;
+    const msg: Message = {
+      id: 'msg-' + uuid().slice(0, 8),
+      threadId,
+      workspaceId: state.workspace!.id,
+      senderType: isClient ? 'client' : 'agency',
+      senderId: isClient ? pu!.id : state.currentUserId!,
+      senderName: isClient ? pu!.name : (state.users[0]?.name || 'Agency'),
+      body,
+      attachments,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    state = {
+      ...state,
+      messages: [...state.messages, msg],
+      messageThreads: state.messageThreads.map(t => t.id === threadId ? { ...t, updatedAt: new Date().toISOString() } : t),
+    };
+    saveState();
+    return { success: true };
+  },
+
+  markMessagesRead(threadId: string) {
+    state = {
+      ...state,
+      messages: state.messages.map(m => m.threadId === threadId && !m.read ? { ...m, read: true } : m),
+    };
+    saveState();
+  },
+
+  addProjectUpdate(projectId: string, title: string, body: string, requestSignOff: boolean, attachments: FileRecord[] = []) {
+    const update: ProjectUpdate = {
+      id: 'upd-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      projectId,
+      title,
+      body,
+      attachments,
+      requestSignOff,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    state = { ...state, projectUpdates: [...state.projectUpdates, update] };
+    addActivity('project_update', `Posted update "${title}"`, 'project', projectId);
+    saveState();
+    return { success: true };
+  },
+
+  approveProjectUpdate(updateId: string, portalUserId: string) {
+    const pu = state.portalUsers.find(p => p.id === portalUserId);
+    state = {
+      ...state,
+      projectUpdates: state.projectUpdates.map(u => u.id === updateId ? { ...u, status: 'approved' as const, approvedBy: pu?.name || 'Client', approvedAt: new Date().toISOString() } : u),
+    };
+    addActivity('update_approved', 'Client approved a project update', 'project_update', updateId);
+    saveState();
+  },
+
+  addFile(file: Omit<FileRecord, 'id' | 'workspaceId' | 'createdAt'>) {
+    const newFile: FileRecord = {
+      ...file,
+      id: 'f-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      createdAt: new Date().toISOString(),
+    };
+    state = { ...state, files: [...state.files, newFile], storageUsed: state.storageUsed + Math.round(file.size / 1024 / 1024) };
+    saveState();
+    return { success: true, fileId: newFile.id };
+  },
+
+  toggleFileSharing(fileId: string) {
+    state = {
+      ...state,
+      files: state.files.map(f => f.id === fileId ? { ...f, sharedWithClient: !f.sharedWithClient, signedUrl: !f.sharedWithClient ? 'https://files.clientertap.com/signed/' + fileId + '?exp=' + (Date.now() + 86400000) : undefined } : f),
+    };
+    saveState();
+  },
+
+  addReview(review: Omit<Review, 'id' | 'workspaceId' | 'createdAt' | 'verified'>) {
+    const newReview: Review = {
+      ...review,
+      id: 'rev-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      verified: true,
+      createdAt: new Date().toISOString(),
+    };
+    state = { ...state, reviews: [...state.reviews, newReview] };
+    saveState();
+    return { success: true };
+  },
+
+  addReferral(referral: Omit<Referral, 'id' | 'workspaceId' | 'createdAt'>) {
+    const newReferral: Referral = {
+      ...referral,
+      id: 'ref-' + uuid().slice(0, 8),
+      workspaceId: state.workspace!.id,
+      createdAt: new Date().toISOString(),
+    };
+    state = { ...state, referrals: [...state.referrals, newReferral] };
+    // Also create a lead from the referral
+    const leadResult = actions.addLead({
+      name: referral.contactName,
+      company: '',
+      email: referral.contactEmail,
+      phone: referral.contactPhone,
+      source: 'Referral',
+      stageId: state.stages[0]?.id || '',
+      estimatedValue: 0,
+      currency: state.workspace?.currency || 'INR',
+      notes: `Referred by ${referral.contactName}. Message: ${referral.message}`,
+      assignedTo: state.currentUserId || '',
+      isWon: false,
+      isLost: false,
+    });
+    if ((leadResult as any).success) {
+      const lastLead = state.leads[state.leads.length - 1];
+      state = { ...state, referrals: state.referrals.map(r => r.id === newReferral.id ? { ...r, leadId: lastLead.id } : r) };
+    }
+    saveState();
+    return { success: true };
   },
 
   // Reset
