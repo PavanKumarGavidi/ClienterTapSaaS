@@ -1,4 +1,4 @@
-import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral } from './types';
+import { AppState, Lead, Client, Project, Invoice, Payment, Meeting, Task, Retainer, PipelineStage, Activity, Notification, User, Workspace, Plan, PLAN_LIMITS, PortalUser, MessageThread, Message, FileRecord, ProjectUpdate, Review, Referral, Document, DocumentTemplate, Signature, IntakeForm, IntakeResponse } from './types';
 import { v4 as uuid } from 'uuid';
 
 const STORAGE_KEY = 'clientertap_state';
@@ -83,6 +83,75 @@ function createDefaultState(): AppState {
   ];
   const reviews: Review[] = [];
   const referrals: Referral[] = [];
+  // Phase 5 — Documents seed data
+  const documentTemplates: DocumentTemplate[] = [
+    {
+      id: 'tpl-1', workspaceId: wsId, name: 'Service Agreement', type: 'contract',
+      body: `<h1>Service Agreement</h1><p>This Service Agreement ("Agreement") is entered into as of <strong>{{date}}</strong>.</p><h2>Parties</h2><p><strong>Service Provider:</strong> {{agency_name}}<br/><strong>Client:</strong> {{client_name}} of {{company}}</p><h2>Scope of Work</h2><p>{{scope}}</p><h2>Payment Terms</h2><p>Total project value: <strong>{{amount}}</strong>. Payment schedule: 50% upfront, 50% on completion.</p><h2>Terms</h2><p>Both parties agree to the terms outlined above. This agreement is binding upon signature.</p>`,
+      mergeFields: ['date', 'agency_name', 'client_name', 'company', 'scope', 'amount'], isDefault: true, createdAt: now
+    },
+    {
+      id: 'tpl-2', workspaceId: wsId, name: 'Project Proposal', type: 'proposal',
+      body: `<h1>Project Proposal</h1><p>Prepared for <strong>{{client_name}}</strong> at {{company}}</p><p>Date: {{date}}</p><h2>Project Overview</h2><p>{{scope}}</p><h2>Investment</h2><p>Total: <strong>{{amount}}</strong></p><h2>Timeline</h2><p>Estimated completion: {{timeline}}</p><h2>Next Steps</h2><p>To proceed, please sign and return this proposal.</p>`,
+      mergeFields: ['date', 'client_name', 'company', 'scope', 'amount', 'timeline'], isDefault: true, createdAt: now
+    },
+    {
+      id: 'tpl-3', workspaceId: wsId, name: 'Mutual NDA', type: 'nda',
+      body: `<h1>Mutual Non-Disclosure Agreement</h1><p>This NDA is entered into between {{agency_name}} and {{company}} ({{client_name}}) on {{date}}.</p><p>Both parties agree to keep confidential any proprietary information shared during the course of business.</p>`,
+      mergeFields: ['date', 'agency_name', 'client_name', 'company'], isDefault: true, createdAt: now
+    },
+  ];
+  const documents: Document[] = [
+    {
+      id: 'doc-1', workspaceId: wsId, type: 'contract', title: 'Brand Redesign Service Agreement',
+      body: documentTemplates[0].body, clientId: 'c1', projectId: 'p1', status: 'signed',
+      templateId: 'tpl-1', version: 1, createdBy: userId, sentAt: now, viewedAt: now, signedAt: now,
+      createdAt: now, updatedAt: now
+    },
+    {
+      id: 'doc-2', workspaceId: wsId, type: 'proposal', title: 'Social Media Campaign Proposal',
+      body: documentTemplates[1].body, clientId: 'c3', projectId: 'p3', status: 'sent',
+      templateId: 'tpl-2', version: 1, createdBy: userId, sentAt: now,
+      createdAt: now, updatedAt: now
+    },
+  ];
+  const signatures: Signature[] = [
+    {
+      id: 'sig-1', workspaceId: wsId, documentId: 'doc-1', signerName: 'Ananya Gupta', signerEmail: 'ananya@novastudio.in',
+      signerRole: 'client', status: 'signed', signatureData: 'Ananya Gupta', signatureType: 'typed',
+      token: 'sig-token-ananya-xyz', viewedAt: now, signedAt: now,
+      ipAddress: '103.21.58.123', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+      createdAt: now
+    },
+  ];
+  const intakeForms: IntakeForm[] = [
+    {
+      id: 'form-1', workspaceId: wsId, title: 'New Client Onboarding',
+      description: 'Please fill out this form to help us understand your business and project needs.',
+      fields: [
+        { id: 'f1', type: 'text', label: 'Full Name', required: true },
+        { id: 'f2', type: 'email', label: 'Email Address', required: true },
+        { id: 'f3', type: 'phone', label: 'Phone Number', required: false },
+        { id: 'f4', type: 'text', label: 'Company Name', required: true },
+        { id: 'f5', type: 'select', label: 'Service Needed', required: true, options: ['Web Design', 'Branding', 'Marketing', 'Development', 'Other'] },
+        { id: 'f6', type: 'longtext', label: 'Tell us about your project', required: true, placeholder: 'Describe your goals, timeline, and budget...' },
+        { id: 'f7', type: 'checkbox', label: 'I agree to be contacted about my enquiry', required: false },
+      ],
+      token: 'form-token-onboarding-abc', isActive: true, responseCount: 2, createdAt: now
+    },
+  ];
+  const intakeResponses: IntakeResponse[] = [
+    {
+      id: 'resp-1', workspaceId: wsId, formId: 'form-1',
+      data: { f1: 'Priya Sharma', f2: 'priya@bloom.co', f3: '+91 98765 43210', f4: 'Bloom Studios', f5: 'Branding', f6: 'Need a complete brand refresh for our D2C skincare line.', f7: true },
+      submittedAt: now, ipAddress: '103.21.58.45', userAgent: 'Mozilla/5.0'
+    },
+    {
+      id: 'resp-2', workspaceId: wsId, formId: 'form-1',
+      data: { f1: 'Raj Patel', f2: 'raj@greenleaf.in', f4: 'GreenLeaf Co', f5: 'Web Design', f6: 'E-commerce website for organic products.', f7: true },
+      submittedAt: new Date(Date.now() - 86400000).toISOString(), ipAddress: '103.21.58.78', userAgent: 'Mozilla/5.0'
+    },
+  ];
   return {
     isAuthenticated: true,
     currentUserId: userId,
@@ -91,6 +160,7 @@ function createDefaultState(): AppState {
     leads, stages, clients, projects, invoices, payments, meetings, tasks, retainers, activities, notifications,
     aiQuotesUsed: 1, aiQuotesResetDate: '2026-04-01', storageUsed: 45,
     portalUsers, currentPortalUserId: null, messageThreads, messages, files, projectUpdates, reviews, referrals,
+    documents, documentTemplates, signatures, intakeForms, intakeResponses,
   };
 }
 
@@ -547,12 +617,239 @@ export const actions = {
     return { success: true };
   },
 
+  // Phase 5 — Documents actions
+  addDocument(doc: Omit<Document, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'version'>) {
+    const newDoc: Document = {
+      ...doc, id: 'doc-' + uuid().slice(0, 8), workspaceId: state.workspace!.id,
+      version: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    };
+    state = { ...state, documents: [...state.documents, newDoc] };
+    addActivity('document_created', `Created document "${doc.title}"`, 'document', newDoc.id);
+    saveState();
+    return { success: true, documentId: newDoc.id };
+  },
+  updateDocument(id: string, updates: Partial<Document>) {
+    state = {
+      ...state,
+      documents: state.documents.map(d => d.id === id ? { ...d, ...updates, version: d.version + 1, updatedAt: new Date().toISOString() } : d)
+    };
+    saveState();
+  },
+  deleteDocument(id: string) {
+    state = { ...state, documents: state.documents.filter(d => d.id !== id) };
+    saveState();
+  },
+  sendDocument(id: string, signerEmail: string, signerName: string, signerRole: 'client' | 'agency' = 'client') {
+    const doc = state.documents.find(d => d.id === id);
+    if (!doc) return { error: 'Document not found' };
+    const token = 'sig-' + uuid().slice(0, 12);
+    const sig: Signature = {
+      id: 'sig-' + uuid().slice(0, 8), workspaceId: state.workspace!.id, documentId: id,
+      signerName, signerEmail, signerRole, status: 'pending', token, createdAt: new Date().toISOString()
+    };
+    state = {
+      ...state,
+      signatures: [...state.signatures, sig],
+      documents: state.documents.map(d => d.id === id ? { ...d, status: 'sent' as const, sentAt: new Date().toISOString() } : d)
+    };
+    addActivity('document_sent', `Sent "${doc.title}" to ${signerName}`, 'document', id);
+    saveState();
+    return { success: true, signatureId: sig.id, token };
+  },
+  viewSignature(token: string) {
+    const sig = state.signatures.find(s => s.token === token);
+    if (!sig) return { error: 'Invalid signature link' };
+    if (sig.status !== 'pending') return { error: 'This signature request is no longer active' };
+    state = {
+      ...state,
+      signatures: state.signatures.map(s => s.id === sig.id ? { ...s, status: 'viewed' as const, viewedAt: new Date().toISOString(), ipAddress: '103.21.58.100', userAgent: navigator.userAgent } : s)
+    };
+    saveState();
+    return { success: true, signature: sig };
+  },
+  signDocument(signatureId: string, signatureData: string, signatureType: 'typed' | 'drawn') {
+    const sig = state.signatures.find(s => s.id === signatureId);
+    if (!sig) return { error: 'Signature not found' };
+    state = {
+      ...state,
+      signatures: state.signatures.map(s => s.id === signatureId ? {
+        ...s, status: 'signed' as const, signatureData, signatureType, signedAt: new Date().toISOString()
+      } : s),
+      documents: state.documents.map(d => d.id === sig.documentId ? { ...d, status: 'signed' as const, signedAt: new Date().toISOString() } : d)
+    };
+    addActivity('document_signed', `Document signed by ${sig.signerName}`, 'document', sig.documentId);
+    saveState();
+    return { success: true };
+  },
+  declineSignature(signatureId: string, reason: string) {
+    const sig = state.signatures.find(s => s.id === signatureId);
+    if (!sig) return { error: 'Signature not found' };
+    state = {
+      ...state,
+      signatures: state.signatures.map(s => s.id === signatureId ? {
+        ...s, status: 'declined' as const, declinedAt: new Date().toISOString(), declinedReason: reason
+      } : s),
+      documents: state.documents.map(d => d.id === sig.documentId ? { ...d, status: 'declined' as const, declinedAt: new Date().toISOString() } : d)
+    };
+    saveState();
+    return { success: true };
+  },
+  aiWriteDocument(brief: string, type: string): { success: boolean; body?: string; error?: string } {
+    const limits = PLAN_LIMITS[state.workspace!.plan];
+    // Check monthly reset
+    const now = new Date();
+    const resetDate = new Date(state.aiQuotesResetDate);
+    if (now >= resetDate) {
+      state = { ...state, aiQuotesUsed: 0, aiQuotesResetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString() };
+    }
+    if (state.aiQuotesUsed >= limits.aiQuotes) {
+      return { success: false, error: `AI quote limit reached (${limits.aiQuotes}/month). Upgrade your plan for more.` };
+    }
+    // Simulate AI generation based on brief
+    const client = state.clients[0];
+    const body = generateAIDocument(brief, String(type), state.workspace?.name || 'Agency', client?.name || 'Client', client?.company || 'Company');
+    state = { ...state, aiQuotesUsed: state.aiQuotesUsed + 1 };
+    addActivity('ai_document_generated', `AI-generated ${type} from brief`, 'document', '');
+    saveState();
+    return { success: true, body };
+  },
+  // Intake Forms
+  addIntakeForm(form: Omit<IntakeForm, 'id' | 'workspaceId' | 'createdAt' | 'token' | 'responseCount'>) {
+    const newForm: IntakeForm = {
+      ...form, id: 'form-' + uuid().slice(0, 8), workspaceId: state.workspace!.id,
+      token: 'form-' + uuid().slice(0, 12), responseCount: 0, createdAt: new Date().toISOString()
+    };
+    state = { ...state, intakeForms: [...state.intakeForms, newForm] };
+    saveState();
+    return { success: true, formId: newForm.id, token: newForm.token };
+  },
+  updateIntakeForm(id: string, updates: Partial<IntakeForm>) {
+    state = { ...state, intakeForms: state.intakeForms.map(f => f.id === id ? { ...f, ...updates } : f) };
+    saveState();
+  },
+  deleteIntakeForm(id: string) {
+    state = { ...state, intakeForms: state.intakeForms.filter(f => f.id !== id), intakeResponses: state.intakeResponses.filter(r => r.formId !== id) };
+    saveState();
+  },
+  regenerateFormToken(id: string) {
+    state = { ...state, intakeForms: state.intakeForms.map(f => f.id === id ? { ...f, token: 'form-' + uuid().slice(0, 12) } : f) };
+    saveState();
+  },
+  submitIntakeForm(formId: string, data: Record<string, any>) {
+    const form = state.intakeForms.find(f => f.id === formId);
+    if (!form || !form.isActive) return { error: 'Form not found or inactive' };
+    const response: IntakeResponse = {
+      id: 'resp-' + uuid().slice(0, 8), workspaceId: state.workspace!.id, formId,
+      data, submittedAt: new Date().toISOString(),
+      ipAddress: '103.21.58.100', userAgent: navigator.userAgent
+    };
+    state = {
+      ...state,
+      intakeResponses: [...state.intakeResponses, response],
+      intakeForms: state.intakeForms.map(f => f.id === formId ? { ...f, responseCount: f.responseCount + 1 } : f)
+    };
+    // If linked to a client, add activity
+    if (form.clientId) {
+      addActivity('form_submitted', `Intake form "${form.title}" submitted`, 'intake_form', formId);
+    }
+    saveState();
+    return { success: true };
+  },
+  // Document Templates
+  addTemplate(tpl: Omit<DocumentTemplate, 'id' | 'workspaceId' | 'createdAt'>) {
+    const newTpl: DocumentTemplate = {
+      ...tpl, id: 'tpl-' + uuid().slice(0, 8), workspaceId: state.workspace!.id, createdAt: new Date().toISOString()
+    };
+    state = { ...state, documentTemplates: [...state.documentTemplates, newTpl] };
+    saveState();
+    return { success: true };
+  },
+
   // Reset
   resetState() {
     state = createDefaultState();
     saveState();
   },
 };
+
+// AI document generator (simulated — production would call LLM API)
+function generateAIDocument(brief: string, type: string, agencyName: string, clientName: string, company: string): string {
+  const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (type === 'contract') {
+    return `<h1>Service Agreement</h1>
+<p>This Service Agreement is entered into as of <strong>${today}</strong> between <strong>${agencyName}</strong> ("Service Provider") and <strong>${clientName}</strong> of <strong>${company}</strong> ("Client").</p>
+<h2>1. Scope of Work</h2>
+<p>${brief}</p>
+<h2>2. Deliverables</h2>
+<p>The Service Provider shall deliver all work products as outlined in the scope above, meeting professional industry standards.</p>
+<h2>3. Timeline</h2>
+<p>Work shall commence upon signing and be completed within the agreed timeframe. Any delays will be communicated in writing.</p>
+<h2>4. Payment Terms</h2>
+<p>Payment is due within 15 days of invoice. A 50% deposit is required to commence work, with the balance due on completion.</p>
+<h2>5. Intellectual Property</h2>
+<p>Upon full payment, all intellectual property rights in the deliverables transfer to the Client.</p>
+<h2>6. Confidentiality</h2>
+<p>Both parties agree to keep confidential any proprietary information shared during the engagement.</p>
+<h2>7. Termination</h2>
+<p>Either party may terminate with 14 days written notice. The Client shall pay for work completed up to the termination date.</p>
+<p><em>By signing below, both parties agree to the terms of this Agreement.</em></p>`;
+  }
+  if (type === 'proposal') {
+    return `<h1>Project Proposal</h1>
+<p>Prepared for <strong>${clientName}</strong> at <strong>${company}</strong></p>
+<p>Date: ${today}</p>
+<h2>Executive Summary</h2>
+<p>${brief}</p>
+<h2>Our Approach</h2>
+<p>We will work closely with your team through a collaborative process that includes discovery, design, development, and delivery phases. Each phase includes review checkpoints to ensure alignment with your vision.</p>
+<h2>Deliverables</h2>
+<ul>
+<li>Comprehensive discovery and strategy session</li>
+<li>Design concepts with up to 3 revision rounds</li>
+<li>Final deliverables in all required formats</li>
+<li>Documentation and handoff materials</li>
+</ul>
+<h2>Timeline</h2>
+<p>Estimated project duration: 4-6 weeks from kickoff.</p>
+<h2>Investment</h2>
+<p>We will provide a detailed quotation upon approval of this proposal.</p>
+<h2>Why Work With Us</h2>
+<p>With years of experience and a portfolio of successful projects, we bring both creativity and reliability to every engagement.</p>
+<p><em>We look forward to the possibility of working together.</em></p>`;
+  }
+  if (type === 'quotation') {
+    return `<h1>Quotation</h1>
+<p>To: <strong>${clientName}</strong>, ${company}</p>
+<p>Date: ${today}</p>
+<p>Valid for: 30 days</p>
+<h2>Project Summary</h2>
+<p>${brief}</p>
+<h2>Breakdown</h2>
+<table style="width:100%; border-collapse:collapse;">
+<tr style="border-bottom:1px solid #eee;"><th style="text-align:left; padding:8px;">Item</th><th style="text-align:right; padding:8px;">Amount</th></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:8px;">Discovery & Strategy</td><td style="text-align:right; padding:8px;">TBD</td></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:8px;">Design & Development</td><td style="text-align:right; padding:8px;">TBD</td></tr>
+<tr style="border-bottom:1px solid #eee;"><td style="padding:8px;">Revisions & Final Delivery</td><td style="text-align:right; padding:8px;">TBD</td></tr>
+</table>
+<p><em>Please review and let us know if you have any questions.</em></p>`;
+  }
+  if (type === 'nda') {
+    return `<h1>Mutual Non-Disclosure Agreement</h1>
+<p>This Mutual Non-Disclosure Agreement ("NDA") is entered into as of <strong>${today}</strong>.</p>
+<h2>Parties</h2>
+<p><strong>${agencyName}</strong> and <strong>${company}</strong> (represented by ${clientName})</p>
+<h2>Purpose</h2>
+<p>The parties wish to explore a potential business relationship and may share confidential information during discussions.</p>
+<h2>Confidential Information</h2>
+<p>Includes but is not limited to: business plans, financial data, technical information, trade secrets, client lists, and any information marked as confidential.</p>
+<h2>Obligations</h2>
+<p>Both parties agree to: (a) hold confidential information in strict confidence; (b) not disclose to third parties without written consent; (c) use information solely for the purpose of evaluating the business relationship.</p>
+<h2>Term</h2>
+<p>This NDA remains in effect for 2 years from the date of signing.</p>
+<p><em>By signing below, both parties accept these terms.</em></p>`;
+  }
+  return `<h1>Document</h1><p>${brief}</p>`;
+}
 
 function addActivity(type: string, description: string, entityType: string, entityId: string) {
   const activity: Activity = { id: 'a-' + uuid().slice(0, 8), workspaceId: state.workspace!.id, type, description, entityType, entityId, userId: state.currentUserId!, createdAt: new Date().toISOString() };

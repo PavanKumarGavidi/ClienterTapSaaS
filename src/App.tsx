@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { getState, subscribe, actions } from './lib/store';
-import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES } from './lib/types';
+import { AppState, Plan, PLAN_LIMITS, CURRENCIES, LEAD_SOURCES, DocumentType, IntakeFormField, IntakeFieldType } from './lib/types';
 import PortalApp from './PortalApp';
 import {
   LayoutDashboard, Users, UserCircle, FolderKanban, CreditCard, MessageSquare,
@@ -8,7 +8,7 @@ import {
   Menu, X, ChevronDown, ChevronRight, Plus, Filter, Download, Upload, Trash2,
   Mail, Phone, Building2, DollarSign, TrendingUp, Clock, Star, ArrowRight,
   LogOut, Eye, Edit, MoreVertical, GripVertical, AlertCircle, CheckCircle2,
-  ArrowUpRight, ArrowDownRight, Zap, Shield, Globe, Heart, ExternalLink
+  ArrowUpRight, ArrowDownRight, Zap, Shield, Globe, Heart, ExternalLink, Sparkles
 } from 'lucide-react';
 
 // Store hook
@@ -1897,38 +1897,933 @@ function SettingsPage() {
   );
 }
 
-// Documents Page (placeholder with real UI)
+// Documents Page — Full Phase 5 implementation
 function DocumentsPage() {
+  const state = useAppState();
+  const [tab, setTab] = useState<'documents' | 'templates' | 'signatures' | 'forms'>('documents');
+  const [showNewDoc, setShowNewDoc] = useState(false);
+  const [showAIWriter, setShowAIWriter] = useState(false);
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
+  const [showPublicForm, setShowPublicForm] = useState<string | null>(null);
+  const [showSigningView, setShowSigningView] = useState<string | null>(null);
+  const [editingDoc, setEditingDoc] = useState<string | null>(null);
+
+  const limits = PLAN_LIMITS[state.workspace?.plan || 'free'];
+  const aiRemaining = limits.aiQuotes - state.aiQuotesUsed;
+
+  const renderTab = () => {
+    switch (tab) {
+      case 'documents': return <DocumentsTab state={state} onNew={() => setShowNewDoc(true)} onAI={() => setShowAIWriter(true)} onEdit={setEditingDoc} onSign={setShowSigningView} />;
+      case 'templates': return <TemplatesTab state={state} />;
+      case 'signatures': return <SignaturesTab state={state} onSign={setShowSigningView} />;
+      case 'forms': return <FormsTab state={state} onNew={() => setShowFormBuilder(true)} onPreview={setShowPublicForm} />;
+      default: return null;
+    }
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-ink">Documents</h1>
-          <p className="text-ink-muted text-sm">Proposals, contracts, and templates</p>
+          <p className="text-ink-muted text-sm">Proposals, contracts, e-signatures, and intake forms</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
+        <div className="flex items-center gap-2">
+          <div className="text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 font-medium">
+            <Sparkles size={12} className="inline mr-1" /> AI: {aiRemaining}/{limits.aiQuotes} remaining
+          </div>
+        </div>
+      </div>
+
+      <div className="flex border-b border-line overflow-x-auto">
+        {[
+          { id: 'documents', label: 'Documents', count: state.documents.length },
+          { id: 'templates', label: 'Templates', count: state.documentTemplates.length },
+          { id: 'signatures', label: 'E-Signatures', count: state.signatures.length },
+          { id: 'forms', label: 'Intake Forms', count: state.intakeForms.length },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id as any)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+            {t.label} <span className="text-xs text-ink-faint">({t.count})</span>
+          </button>
+        ))}
+      </div>
+
+      {renderTab()}
+
+      {showNewDoc && <NewDocumentModal onClose={() => setShowNewDoc(false)} onAI={() => { setShowNewDoc(false); setShowAIWriter(true); }} />}
+      {showAIWriter && <AIWriterModal onClose={() => setShowAIWriter(false)} />}
+      {editingDoc && <DocumentEditorModal docId={editingDoc} onClose={() => setEditingDoc(null)} />}
+      {showFormBuilder && <FormBuilderModal onClose={() => setShowFormBuilder(false)} />}
+      {showPublicForm && <PublicFormPreview formId={showPublicForm} onClose={() => setShowPublicForm(null)} />}
+      {showSigningView && <SigningViewModal signatureId={showSigningView} onClose={() => setShowSigningView(null)} />}
+    </div>
+  );
+}
+
+// Documents Tab
+function DocumentsTab({ state, onNew, onAI, onEdit, onSign }: {
+  state: AppState; onNew: () => void; onAI: () => void; onEdit: (id: string) => void; onSign: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button onClick={onNew} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
           <Plus size={16} /> New document
         </button>
+        <button onClick={onAI} className="inline-flex items-center gap-2 px-4 py-2.5 border border-primary-200 bg-primary-50 text-primary-700 text-sm font-semibold rounded-xl hover:bg-primary-100">
+          <Sparkles size={16} /> Write with AI
+        </button>
       </div>
-      <div className="grid md:grid-cols-3 gap-4">
-        {[
-          { title: 'Service Agreement', type: 'Contract', status: 'Signed', date: '2026-03-15' },
-          { title: 'Website Redesign Proposal', type: 'Proposal', status: 'Sent', date: '2026-03-20' },
-          { title: 'NDA Template', type: 'Template', status: 'Draft', date: '2026-02-01' },
-        ].map((doc, i) => (
-          <div key={i} className="bg-surface rounded-2xl border border-line p-4 shadow-soft hover:shadow-soft-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-                <FileText size={18} className="text-primary-600" />
+
+      {state.documents.length === 0 ? (
+        <div className="bg-surface rounded-2xl border border-line p-12 text-center">
+          <FileText size={40} className="mx-auto mb-3 text-ink-faint opacity-50" />
+          <p className="text-ink-muted">No documents yet</p>
+          <p className="text-xs text-ink-faint mt-1">Create a proposal, contract, or use AI to draft one</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {state.documents.map(doc => {
+            const client = state.clients.find(c => c.id === doc.clientId);
+            const sig = state.signatures.find(s => s.documentId === doc.id);
+            return (
+              <div key={doc.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft hover:shadow-soft-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                    <FileText size={18} className="text-primary-600" />
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded capitalize ${doc.status === 'signed' ? 'bg-green-50 text-green-700' : doc.status === 'sent' ? 'bg-blue-50 text-blue-700' : doc.status === 'viewed' ? 'bg-amber-50 text-amber-700' : doc.status === 'declined' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-600'}`}>
+                    {doc.status}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-ink mb-1">{doc.title}</h3>
+                <p className="text-xs text-ink-muted capitalize mb-3">{doc.type} {client && `• ${client.company}`}</p>
+                <div className="flex gap-1.5">
+                  <button onClick={() => onEdit(doc.id)} className="flex-1 py-1.5 border border-line rounded-lg text-xs font-medium text-ink hover:bg-canvas flex items-center justify-center gap-1">
+                    <Eye size={12} /> View
+                  </button>
+                  {doc.status === 'draft' && (
+                    <button onClick={() => onSign(doc.id)} className="flex-1 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1">
+                      <Edit size={12} /> Send
+                    </button>
+                  )}
+                  {sig && sig.status === 'signed' && (
+                    <button onClick={() => onSign(sig.id)} className="flex-1 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1">
+                      <CheckCircle2 size={12} /> Audit
+                    </button>
+                  )}
+                </div>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded ${doc.status === 'Signed' ? 'bg-green-50 text-green-700' : doc.status === 'Sent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-600'}`}>
-                {doc.status}
-              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Templates Tab
+function TemplatesTab({ state }: { state: AppState }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-canvas rounded-xl p-4 text-sm text-ink-muted">
+        <strong className="text-ink">Templates</strong> are reusable document starting points. Use merge fields like <code className="px-1 py-0.5 bg-surface rounded text-primary-600">{'{{client_name}}'}</code> that get replaced when creating a document.
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        {state.documentTemplates.map(tpl => (
+          <div key={tpl.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+            <div className="flex items-start justify-between mb-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <FileText size={18} className="text-amber-600" />
+              </div>
+              <span className="text-xs px-2 py-0.5 rounded capitalize bg-canvas text-ink-muted">{tpl.type}</span>
             </div>
-            <h3 className="text-sm font-semibold text-ink">{doc.title}</h3>
-            <p className="text-xs text-ink-muted mt-1">{doc.type} • {doc.date}</p>
+            <h3 className="text-sm font-semibold text-ink">{tpl.name}</h3>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {tpl.mergeFields.slice(0, 4).map(f => (
+                <span key={f} className="text-xs px-1.5 py-0.5 rounded bg-primary-50 text-primary-700">{`{{${f}}}`}</span>
+              ))}
+              {tpl.mergeFields.length > 4 && <span className="text-xs text-ink-faint">+{tpl.mergeFields.length - 4} more</span>}
+            </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Signatures Tab
+function SignaturesTab({ state, onSign }: { state: AppState; onSign: (id: string) => void }) {
+  return (
+    <div className="space-y-3">
+      {state.signatures.length === 0 ? (
+        <div className="bg-surface rounded-2xl border border-line p-12 text-center">
+          <Edit size={40} className="mx-auto mb-3 text-ink-faint opacity-50" />
+          <p className="text-ink-muted">No signature requests yet</p>
+          <p className="text-xs text-ink-faint mt-1">Send a document for e-signature to get started</p>
+        </div>
+      ) : (
+        state.signatures.map(sig => {
+          const doc = state.documents.find(d => d.id === sig.documentId);
+          return (
+            <div key={sig.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sig.status === 'signed' ? 'bg-green-50' : sig.status === 'viewed' ? 'bg-amber-50' : sig.status === 'declined' ? 'bg-red-50' : 'bg-blue-50'}`}>
+                <Edit size={18} className={sig.status === 'signed' ? 'text-green-600' : sig.status === 'viewed' ? 'text-amber-600' : sig.status === 'declined' ? 'text-red-600' : 'text-blue-600'} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-ink">{doc?.title || 'Document'}</div>
+                <div className="text-xs text-ink-muted">{sig.signerName} • {sig.signerEmail}</div>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded capitalize ${sig.status === 'signed' ? 'bg-green-50 text-green-700' : sig.status === 'viewed' ? 'bg-amber-50 text-amber-700' : sig.status === 'declined' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
+                {sig.status}
+              </span>
+              <button onClick={() => onSign(sig.id)} className="px-3 py-1.5 border border-line rounded-lg text-xs font-medium text-ink hover:bg-canvas">
+                View audit
+              </button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// Forms Tab
+function FormsTab({ state, onNew, onPreview }: { state: AppState; onNew: () => void; onPreview: (id: string) => void }) {
+  return (
+    <div className="space-y-4">
+      <button onClick={onNew} className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
+        <Plus size={16} /> New intake form
+      </button>
+
+      {state.intakeForms.length === 0 ? (
+        <div className="bg-surface rounded-2xl border border-line p-12 text-center">
+          <FileText size={40} className="mx-auto mb-3 text-ink-faint opacity-50" />
+          <p className="text-ink-muted">No intake forms yet</p>
+          <p className="text-xs text-ink-faint mt-1">Create a form to collect client information via a public link</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {state.intakeForms.map(form => (
+            <div key={form.id} className="bg-surface rounded-2xl border border-line p-4 shadow-soft">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">{form.title}</h3>
+                  <p className="text-xs text-ink-muted mt-0.5">{form.description}</p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded ${form.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'}`}>
+                  {form.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-ink-faint mt-3">
+                <span>{form.fields.length} fields</span>
+                <span>{form.responseCount} response(s)</span>
+              </div>
+              <div className="mt-3 flex items-center gap-2 p-2 bg-canvas rounded-lg">
+                <Globe size={12} className="text-ink-faint" />
+                <code className="text-xs text-primary-600 flex-1 truncate">clientertap.com/form/{form.token}</code>
+                <button onClick={() => onPreview(form.id)} className="px-2 py-1 bg-surface border border-line rounded text-xs font-medium text-ink hover:bg-canvas">
+                  Preview
+                </button>
+                <button onClick={() => {
+                  navigator.clipboard.writeText(`https://clientertap.com/form/${form.token}`);
+                  alert('Link copied!');
+                }} className="px-2 py-1 bg-surface border border-line rounded text-xs font-medium text-ink hover:bg-canvas">
+                  Copy
+                </button>
+                <button onClick={() => {
+                  if (confirm('Regenerate link? Old link will stop working.')) {
+                    actions.regenerateFormToken(form.id);
+                  }
+                }} className="px-2 py-1 bg-surface border border-line rounded text-xs font-medium text-ink hover:bg-canvas">
+                  Revoke
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// New Document Modal
+function NewDocumentModal({ onClose, onAI }: { onClose: () => void; onAI: () => void }) {
+  const state = useAppState();
+  const [form, setForm] = useState({
+    title: '', type: 'proposal' as DocumentType, clientId: '', projectId: '', templateId: '', body: ''
+  });
+
+  const handleTemplateSelect = (tplId: string) => {
+    const tpl = state.documentTemplates.find(t => t.id === tplId);
+    if (tpl) {
+      setForm({ ...form, templateId: tplId, body: tpl.body, type: tpl.type });
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    actions.addDocument({ ...form, status: 'draft', createdBy: state.currentUserId! });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-2xl bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <h2 className="font-semibold text-ink">New document</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Title *</label>
+              <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Type</label>
+              <select value={form.type} onChange={e => setForm({...form, type: e.target.value as DocumentType})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="proposal">Proposal</option>
+                <option value="contract">Contract</option>
+                <option value="quotation">Quotation</option>
+                <option value="nda">NDA</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Client</label>
+              <select value={form.clientId} onChange={e => setForm({...form, clientId: e.target.value})}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="">— None —</option>
+                {state.clients.map(c => <option key={c.id} value={c.id}>{c.company}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Start from template</label>
+              <select value={form.templateId} onChange={e => handleTemplateSelect(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="">— Blank —</option>
+                {state.documentTemplates.filter(t => t.type === form.type).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-ink">Content</label>
+              <button type="button" onClick={onAI} className="text-xs text-primary-600 font-medium hover:underline flex items-center gap-1">
+                <Sparkles size={12} /> Write with AI
+              </button>
+            </div>
+            <textarea value={form.body} onChange={e => setForm({...form, body: e.target.value})} rows={10}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono resize-none"
+              placeholder="Write your document content here. Use HTML for formatting." />
+            <p className="text-xs text-ink-faint mt-1">HTML supported. Use {'{{client_name}}'}, {'{{company}}'}, {'{{date}}'}, {'{{amount}}'} for merge fields.</p>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+            <button type="submit" className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Create document</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// AI Writer Modal
+function AIWriterModal({ onClose }: { onClose: () => void }) {
+  const state = useAppState();
+  const [type, setType] = useState<string>('proposal');
+  const [brief, setBrief] = useState('');
+  const [generated, setGenerated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const limits = PLAN_LIMITS[state.workspace?.plan || 'free'];
+
+  const handleGenerate = () => {
+    if (!brief.trim()) return;
+    setLoading(true);
+    // Simulate AI delay
+    setTimeout(() => {
+      const result = actions.aiWriteDocument(brief, type as unknown as DocumentType);
+      setLoading(false);
+      if (result.success && result.body) {
+        setGenerated(result.body);
+      } else {
+        alert(result.error);
+      }
+    }, 1500);
+  };
+
+  const handleSaveAsDocument = () => {
+    if (!generated) return;
+    const title = prompt('Document title:', `${type.charAt(0).toUpperCase() + type.slice(1)} — ${brief.slice(0, 30)}`);
+    if (title) {
+      actions.addDocument({ title, type: type as DocumentType, body: generated, status: 'draft', createdBy: state.currentUserId! });
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-2xl bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-primary-600" />
+            <h2 className="font-semibold text-ink">AI Document Writer</h2>
+          </div>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-3 text-xs text-primary-800">
+            <strong>Quota:</strong> {limits.aiQuotes - state.aiQuotesUsed} of {limits.aiQuotes} AI quotes remaining this month. Each generation counts as 1.
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Document type</label>
+              <select value={type} onChange={e => setType(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="proposal">Proposal</option>
+                <option value="contract">Contract</option>
+                <option value="quotation">Quotation</option>
+                <option value="nda">NDA</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Brief (describe what you need)</label>
+            <textarea value={brief} onChange={e => setBrief(e.target.value)} rows={4}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              placeholder="E.g., A web design proposal for a D2C skincare brand needing a full rebrand including logo, packaging, and e-commerce site..." />
+          </div>
+          {!generated ? (
+            <button onClick={handleGenerate} disabled={loading || !brief.trim()}
+              className="w-full py-3 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-ember flex items-center justify-center gap-2">
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Generating...
+                </>
+              ) : (
+                <><Sparkles size={16} /> Generate document</>
+              )}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="bg-canvas rounded-xl p-4 max-h-64 overflow-y-auto">
+                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: generated }} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setGenerated(null)} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Regenerate</button>
+                <button onClick={handleSaveAsDocument} className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Save as document</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Document Editor / Viewer Modal
+function DocumentEditorModal({ docId, onClose }: { docId: string; onClose: () => void }) {
+  const state = useAppState();
+  const doc = state.documents.find(d => d.id === docId);
+  const [body, setBody] = useState(doc?.body || '');
+  const [showSendForSig, setShowSendForSig] = useState(false);
+  const [sigForm, setSigForm] = useState({ signerName: '', signerEmail: '' });
+
+  if (!doc) return null;
+  const client = state.clients.find(c => c.id === doc.clientId);
+  const sig = state.signatures.find(s => s.documentId === doc.id);
+
+  const handleSave = () => {
+    actions.updateDocument(doc.id, { body });
+    onClose();
+  };
+
+  const handleSendForSignature = () => {
+    if (!sigForm.signerName || !sigForm.signerEmail) return;
+    actions.sendDocument(doc.id, sigForm.signerEmail, sigForm.signerName);
+    setShowSendForSig(false);
+    onClose();
+  };
+
+  // Render body with merge fields replaced for preview
+  const renderBody = (html: string) => {
+    return html
+      .replace(/\{\{client_name\}\}/g, client?.name || '[Client Name]')
+      .replace(/\{\{company\}\}/g, client?.company || '[Company]')
+      .replace(/\{\{agency_name\}\}/g, state.workspace?.name || '[Agency]')
+      .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))
+      .replace(/\{\{amount\}\}/g, '[Amount]')
+      .replace(/\{\{scope\}\}/g, '[Scope of work]')
+      .replace(/\{\{timeline\}\}/g, '[Timeline]');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-3xl bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div>
+            <h2 className="font-semibold text-ink">{doc.title}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-xs px-2 py-0.5 rounded capitalize ${doc.status === 'signed' ? 'bg-green-50 text-green-700' : doc.status === 'sent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-600'}`}>
+                {doc.status}
+              </span>
+              <span className="text-xs text-ink-faint">v{doc.version} • {doc.type}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()} className="px-3 py-1.5 border border-line rounded-lg text-xs font-medium text-ink hover:bg-canvas flex items-center gap-1">
+              <Download size={12} /> Print / PDF
+            </button>
+            <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+          </div>
+        </div>
+
+        {/* Document Preview */}
+        <div className="p-6 bg-white min-h-[400px]" id="document-print-area">
+          <div className="max-w-2xl mx-auto prose prose-sm" dangerouslySetInnerHTML={{ __html: renderBody(body) }} />
+        </div>
+
+        {/* Actions */}
+        <div className="sticky bottom-0 bg-surface border-t border-line p-4 flex items-center justify-between">
+          <div className="text-xs text-ink-faint">
+            {client && <>Client: <strong>{client.company}</strong></>}
+          </div>
+          <div className="flex gap-2">
+            {doc.status === 'draft' && (
+              <>
+                <button onClick={handleSave} className="px-4 py-2 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Save draft</button>
+                <button onClick={() => setShowSendForSig(true)} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl flex items-center gap-1">
+                  <Edit size={14} /> Send for signature
+                </button>
+              </>
+            )}
+            {sig && (
+              <div className="text-xs text-ink-muted">
+                {sig.status === 'signed' && <>✓ Signed by {sig.signerName} on {new Date(sig.signedAt!).toLocaleDateString()}</>}
+                {sig.status === 'pending' && <>Awaiting signature from {sig.signerName}</>}
+                {sig.status === 'viewed' && <>{sig.signerName} viewed the document</>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Send for signature modal */}
+        {showSendForSig && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-4 z-20">
+            <div className="bg-surface rounded-2xl p-5 w-full max-w-md border border-line shadow-soft-lg">
+              <h3 className="font-semibold text-ink mb-3">Send for e-signature</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Signer name *</label>
+                  <input type="text" value={sigForm.signerName} onChange={e => setSigForm({...sigForm, signerName: e.target.value})}
+                    placeholder={client?.name || 'Client name'}
+                    className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">Signer email *</label>
+                  <input type="email" value={sigForm.signerEmail} onChange={e => setSigForm({...sigForm, signerEmail: e.target.value})}
+                    placeholder={client?.email || 'client@email.com'}
+                    className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <p className="text-xs text-ink-faint">The signer will receive a secure link to review and sign the document.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowSendForSig(false)} className="flex-1 py-2 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+                  <button onClick={handleSendForSignature} className="flex-1 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Signing View Modal (for client to sign, or agency to view audit)
+function SigningViewModal({ signatureId, onClose }: { signatureId: string; onClose: () => void }) {
+  const state = useAppState();
+  const sig = state.signatures.find(s => s.id === signatureId);
+  const doc = sig ? state.documents.find(d => d.id === sig.documentId) : null;
+  const [signatureText, setSignatureText] = useState('');
+  const [signatureDrawn, setSignatureDrawn] = useState<string | null>(null);
+  const [mode, setMode] = useState<'type' | 'draw'>('type');
+  const [declineReason, setDeclineReason] = useState('');
+  const [showDecline, setShowDecline] = useState(false);
+  const canvasRef = useState<HTMLCanvasElement | null>(null);
+
+  if (!sig || !doc) return null;
+
+  const isSignerView = sig.status === 'pending' || sig.status === 'viewed';
+  const isAuditView = sig.status === 'signed' || sig.status === 'declined';
+
+  const renderBody = (html: string) => {
+    const client = state.clients.find(c => c.id === doc.clientId);
+    return html
+      .replace(/\{\{client_name\}\}/g, client?.name || '[Client Name]')
+      .replace(/\{\{company\}\}/g, client?.company || '[Company]')
+      .replace(/\{\{agency_name\}\}/g, state.workspace?.name || '[Agency]')
+      .replace(/\{\{date\}\}/g, new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }))
+      .replace(/\{\{amount\}\}/g, '[Amount]')
+      .replace(/\{\{scope\}\}/g, '[Scope of work]')
+      .replace(/\{\{timeline\}\}/g, '[Timeline]');
+  };
+
+  const handleSign = () => {
+    const sigData = mode === 'type' ? signatureText : (signatureDrawn || '');
+    if (!sigData) { alert('Please provide your signature'); return; }
+    actions.signDocument(sig.id, sigData, mode === 'type' ? 'typed' : 'drawn');
+    onClose();
+  };
+
+  const handleDecline = () => {
+    if (!declineReason.trim()) { alert('Please provide a reason'); return; }
+    actions.declineSignature(sig.id, declineReason);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-3xl bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div>
+            <h2 className="font-semibold text-ink">{isAuditView ? 'Signature Audit Trail' : 'Sign Document'}</h2>
+            <p className="text-xs text-ink-muted">{doc.title}</p>
+          </div>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+
+        {/* Document content */}
+        <div className="p-6 bg-white border-b border-line">
+          <div className="max-w-2xl mx-auto prose prose-sm" dangerouslySetInnerHTML={{ __html: renderBody(doc.body) }} />
+        </div>
+
+        {isAuditView ? (
+          // Audit trail view
+          <div className="p-5 space-y-4">
+            <h3 className="font-semibold text-ink flex items-center gap-2">
+              <Shield size={16} className="text-green-600" /> Audit Trail
+            </h3>
+            <div className="bg-canvas rounded-xl p-4 space-y-3 text-sm">
+              <div className="flex justify-between"><span className="text-ink-muted">Signer</span><span className="text-ink font-medium">{sig.signerName}</span></div>
+              <div className="flex justify-between"><span className="text-ink-muted">Email</span><span className="text-ink">{sig.signerEmail}</span></div>
+              <div className="flex justify-between"><span className="text-ink-muted">Status</span>
+                <span className={`px-2 py-0.5 rounded text-xs capitalize ${sig.status === 'signed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{sig.status}</span>
+              </div>
+              {sig.viewedAt && <div className="flex justify-between"><span className="text-ink-muted">Viewed</span><span className="text-ink">{new Date(sig.viewedAt).toLocaleString()}</span></div>}
+              {sig.signedAt && <div className="flex justify-between"><span className="text-ink-muted">Signed</span><span className="text-ink">{new Date(sig.signedAt).toLocaleString()}</span></div>}
+              {sig.declinedAt && <div className="flex justify-between"><span className="text-ink-muted">Declined</span><span className="text-ink">{new Date(sig.declinedAt).toLocaleString()}</span></div>}
+              {sig.declinedReason && <div className="flex justify-between"><span className="text-ink-muted">Reason</span><span className="text-ink">{sig.declinedReason}</span></div>}
+              <div className="flex justify-between"><span className="text-ink-muted">IP Address</span><span className="text-ink font-mono text-xs">{sig.ipAddress || 'N/A'}</span></div>
+              <div className="flex justify-between"><span className="text-ink-muted">User Agent</span><span className="text-ink font-mono text-xs truncate max-w-xs">{sig.userAgent || 'N/A'}</span></div>
+              <div className="flex justify-between"><span className="text-ink-muted">Signature type</span><span className="text-ink capitalize">{sig.signatureType || 'N/A'}</span></div>
+              {sig.signatureData && (
+                <div className="pt-3 border-t border-line">
+                  <span className="text-ink-muted text-xs">Signature:</span>
+                  {sig.signatureType === 'drawn' ? (
+                    <div className="mt-2 p-3 bg-white border border-line rounded-lg">
+                      <img src={sig.signatureData} alt="Signature" className="max-h-16" />
+                    </div>
+                  ) : (
+                    <div className="mt-2 p-3 bg-white border border-line rounded-lg font-serif text-2xl italic text-ink">{sig.signatureData}</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button onClick={() => window.print()} className="w-full py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas flex items-center justify-center gap-2">
+              <Download size={14} /> Download audit certificate (PDF)
+            </button>
+          </div>
+        ) : (
+          // Signing view
+          <div className="p-5 space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+              <strong>Review required:</strong> Please read the document above carefully before signing. By signing, you agree to be bound by its terms.
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <button onClick={() => setMode('type')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${mode === 'type' ? 'bg-primary-50 text-primary-600' : 'bg-canvas text-ink-muted'}`}>
+                  Type signature
+                </button>
+                <button onClick={() => setMode('draw')} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${mode === 'draw' ? 'bg-primary-50 text-primary-600' : 'bg-canvas text-ink-muted'}`}>
+                  Draw signature
+                </button>
+              </div>
+
+              {mode === 'type' ? (
+                <div>
+                  <input type="text" value={signatureText} onChange={e => setSignatureText(e.target.value)}
+                    placeholder="Type your full name"
+                    className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  {signatureText && (
+                    <div className="mt-2 p-4 bg-canvas rounded-xl border border-line">
+                      <div className="font-serif text-3xl italic text-ink">{signatureText}</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-line rounded-xl p-4 bg-canvas">
+                  <p className="text-xs text-ink-muted mb-2">Draw your signature below (simulated — in production uses canvas)</p>
+                  <input type="text" value={signatureDrawn || ''} onChange={e => setSignatureDrawn(e.target.value)}
+                    placeholder="[Draw signature area — using text input for demo]"
+                    className="w-full px-3 py-2 rounded-lg border border-line bg-white text-sm font-serif italic" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setShowDecline(true)} className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50">Decline</button>
+              <button onClick={handleSign} disabled={mode === 'type' ? !signatureText : !signatureDrawn}
+                className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl">
+                Sign document
+              </button>
+            </div>
+
+            {showDecline && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                <label className="block text-xs font-medium text-red-800">Reason for declining</label>
+                <textarea value={declineReason} onChange={e => setDeclineReason(e.target.value)} rows={2}
+                  className="w-full px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red-500 resize-none" />
+                <div className="flex gap-2">
+                  <button onClick={() => setShowDecline(false)} className="px-3 py-1.5 border border-red-200 rounded-lg text-xs font-medium text-red-700">Cancel</button>
+                  <button onClick={handleDecline} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium">Confirm decline</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Form Builder Modal
+function FormBuilderModal({ onClose }: { onClose: () => void }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [fields, setFields] = useState<IntakeFormField[]>([
+    { id: 'f1', type: 'text', label: 'Full Name', required: true },
+    { id: 'f2', type: 'email', label: 'Email', required: true },
+  ]);
+
+  const addField = (type: IntakeFieldType) => {
+    setFields([...fields, { id: 'f' + Date.now(), type, label: 'New field', required: false, options: type === 'select' || type === 'multiselect' ? ['Option 1', 'Option 2'] : undefined }]);
+  };
+
+  const updateField = (id: string, updates: Partial<IntakeFormField>) => {
+    setFields(fields.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
+  const removeField = (id: string) => {
+    setFields(fields.filter(f => f.id !== id));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || fields.length === 0) return;
+    const result = actions.addIntakeForm({ title, description, fields, isActive: true });
+    if ((result as any).success) {
+      alert(`Form created!\n\nPublic link: https://clientertap.com/form/${(result as any).token}\n\nShare this link — no login required.`);
+    }
+    onClose();
+  };
+
+  const fieldTypes: { type: IntakeFieldType; label: string }[] = [
+    { type: 'text', label: 'Short text' },
+    { type: 'longtext', label: 'Long text' },
+    { type: 'email', label: 'Email' },
+    { type: 'phone', label: 'Phone' },
+    { type: 'number', label: 'Number' },
+    { type: 'select', label: 'Dropdown' },
+    { type: 'multiselect', label: 'Multi-select' },
+    { type: 'date', label: 'Date' },
+    { type: 'checkbox', label: 'Checkbox' },
+    { type: 'file', label: 'File upload' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-3xl bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <h2 className="font-semibold text-ink">Build intake form</h2>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Form title *</label>
+            <input type="text" required value={title} onChange={e => setTitle(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="e.g., New Client Onboarding" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              placeholder="Brief description shown to respondents" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-2">Fields</label>
+            <div className="space-y-2">
+              {fields.map((field, idx) => (
+                <div key={field.id} className="bg-canvas rounded-xl p-3 flex items-start gap-2">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input type="text" value={field.label} onChange={e => updateField(field.id, { label: e.target.value })}
+                        className="flex-1 px-2 py-1 rounded-lg border border-line bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                      <select value={field.type} onChange={e => updateField(field.id, { type: e.target.value as IntakeFieldType })}
+                        className="px-2 py-1 rounded-lg border border-line bg-white text-xs text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        {fieldTypes.map(ft => <option key={ft.type} value={ft.type}>{ft.label}</option>)}
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs text-ink-muted">
+                      <input type="checkbox" checked={field.required} onChange={e => updateField(field.id, { required: e.target.checked })}
+                        className="rounded border-line" />
+                      Required
+                    </label>
+                    {(field.type === 'select' || field.type === 'multiselect') && (
+                      <input type="text" value={(field.options || []).join(', ')}
+                        onChange={e => updateField(field.id, { options: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                        placeholder="Option 1, Option 2, ..."
+                        className="w-full px-2 py-1 rounded-lg border border-line bg-white text-xs text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    )}
+                  </div>
+                  <button type="button" onClick={() => removeField(field.id)} className="text-red-500 hover:text-red-700 p-1">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {fieldTypes.map(ft => (
+                <button key={ft.type} type="button" onClick={() => addField(ft.type)}
+                  className="px-2 py-1 border border-line rounded-lg text-xs text-ink-muted hover:bg-canvas hover:text-ink">
+                  + {ft.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+            <button type="submit" className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Create form</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Public Form Preview Modal
+function PublicFormPreview({ formId, onClose }: { formId: string; onClose: () => void }) {
+  const state = useAppState();
+  const form = state.intakeForms.find(f => f.id === formId);
+  const [data, setData] = useState<Record<string, any>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  if (!form) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    actions.submitIntakeForm(form.id, data);
+    setSubmitted(true);
+  };
+
+  if (submitted) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/30"></div>
+        <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-soft-lg border border-line p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={32} className="text-green-600" />
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2">Thank you!</h2>
+          <p className="text-sm text-ink-muted">Your response has been submitted successfully.</p>
+          <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-surface rounded-2xl shadow-soft-lg border border-line max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-surface border-b border-line p-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div>
+            <h2 className="font-semibold text-ink">{form.title}</h2>
+            <p className="text-xs text-ink-faint">Public preview — form token: {form.token}</p>
+          </div>
+          <button onClick={onClose} className="text-ink-faint hover:text-ink"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {form.description && <p className="text-sm text-ink-muted">{form.description}</p>}
+          {form.fields.map(field => (
+            <div key={field.id}>
+              <label className="block text-sm font-medium text-ink mb-1">
+                {field.label} {field.required && <span className="text-red-500">*</span>}
+              </label>
+              {field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'number' ? (
+                <input type={field.type} required={field.required}
+                  value={data[field.id] || ''} onChange={e => setData({...data, [field.id]: e.target.value})}
+                  placeholder={field.placeholder}
+                  className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              ) : field.type === 'longtext' ? (
+                <textarea required={field.required} value={data[field.id] || ''} onChange={e => setData({...data, [field.id]: e.target.value})}
+                  placeholder={field.placeholder} rows={3}
+                  className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+              ) : field.type === 'select' ? (
+                <select required={field.required} value={data[field.id] || ''} onChange={e => setData({...data, [field.id]: e.target.value})}
+                  className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="">Select...</option>
+                  {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : field.type === 'multiselect' ? (
+                <div className="space-y-1">
+                  {(field.options || []).map(o => (
+                    <label key={o} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={(data[field.id] || []).includes(o)}
+                        onChange={e => {
+                          const current = data[field.id] || [];
+                          setData({...data, [field.id]: e.target.checked ? [...current, o] : current.filter((x: string) => x !== o)});
+                        }}
+                        className="rounded border-line" />
+                      {o}
+                    </label>
+                  ))}
+                </div>
+              ) : field.type === 'date' ? (
+                <input type="date" required={field.required} value={data[field.id] || ''} onChange={e => setData({...data, [field.id]: e.target.value})}
+                  className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              ) : field.type === 'checkbox' ? (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!data[field.id]} onChange={e => setData({...data, [field.id]: e.target.checked})}
+                    className="rounded border-line" />
+                  {field.label}
+                </label>
+              ) : field.type === 'file' ? (
+                <input type="file" required={field.required}
+                  className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink" />
+              ) : null}
+            </div>
+          ))}
+          <button type="submit" className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-ember">
+            Submit
+          </button>
+        </form>
       </div>
     </div>
   );

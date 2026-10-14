@@ -281,6 +281,97 @@ export interface Referral {
   createdAt: string;
 }
 
+// Phase 5 — Documents types
+export type DocumentType = 'proposal' | 'contract' | 'quotation' | 'nda' | 'other';
+export type DocumentStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired';
+
+export interface Document {
+  id: string;
+  workspaceId: string;
+  type: DocumentType;
+  title: string;
+  body: string; // HTML content with merge fields
+  clientId?: string;
+  projectId?: string;
+  status: DocumentStatus;
+  templateId?: string;
+  version: number;
+  createdBy: string;
+  sentAt?: string;
+  viewedAt?: string;
+  signedAt?: string;
+  declinedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  workspaceId: string;
+  name: string;
+  type: DocumentType;
+  body: string;
+  mergeFields: string[]; // e.g. ['client_name', 'company', 'amount']
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface Signature {
+  id: string;
+  workspaceId: string;
+  documentId: string;
+  signerName: string;
+  signerEmail: string;
+  signerRole: 'client' | 'agency';
+  status: 'pending' | 'viewed' | 'signed' | 'declined' | 'expired';
+  signatureData?: string; // base64 image (drawn) or text (typed)
+  signatureType?: 'typed' | 'drawn';
+  token: string; // unique signing link token
+  viewedAt?: string;
+  signedAt?: string;
+  declinedAt?: string;
+  declinedReason?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export type IntakeFieldType = 'text' | 'longtext' | 'email' | 'phone' | 'select' | 'multiselect' | 'date' | 'file' | 'checkbox' | 'number';
+
+export interface IntakeFormField {
+  id: string;
+  type: IntakeFieldType;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[]; // for select/multiselect
+}
+
+export interface IntakeForm {
+  id: string;
+  workspaceId: string;
+  title: string;
+  description: string;
+  fields: IntakeFormField[];
+  clientId?: string;
+  projectId?: string;
+  token: string; // public access token
+  isActive: boolean;
+  responseCount: number;
+  createdAt: string;
+}
+
+export interface IntakeResponse {
+  id: string;
+  workspaceId: string;
+  formId: string;
+  data: Record<string, any>;
+  submittedAt: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 export interface AppState {
   isAuthenticated: boolean;
   currentUserId: string | null;
@@ -309,6 +400,12 @@ export interface AppState {
   projectUpdates: ProjectUpdate[];
   reviews: Review[];
   referrals: Referral[];
+  // Phase 5 — Documents
+  documents: Document[];
+  documentTemplates: DocumentTemplate[];
+  signatures: Signature[];
+  intakeForms: IntakeForm[];
+  intakeResponses: IntakeResponse[];
 }
 
 export const PLAN_LIMITS: Record<Plan, {

@@ -1,6 +1,6 @@
 # ClienterTap — Feature Parity Checklist
 
-> Last updated: Phase 1-4 (Foundations + Core CRM + Money + Portal)
+> Last updated: Phase 1-5 (Foundations + Core CRM + Money + Portal + Documents)
 > Status key: ✅ Built | 🧪 Tested | ⏳ Not started | 🚫 Blocked
 
 ## P1 — Foundations
@@ -98,14 +98,33 @@
 | 74 | Portal — Invite email (simulated) | Client drawer | ✅ Built | Shows token/password on enable |
 | 75 | Portal — Last login tracking | PortalUser model | ✅ Built | Tracked and displayed |
 
-## P5 — Documents
+## P5 — Documents ✅ COMPLETE
 
 | # | Feature | Page/Route | Status | Notes |
 |---|---------|-----------|--------|-------|
-| 61 | Documents — List & create | /documents | ✅ Built | Card UI with status |
-| 62 | AI quote/contract writer | — | ⏳ Not started | Needs LLM API key |
-| 63 | E-signature flow | — | ⏳ Not started | |
-| 64 | Intake forms (builder + public link) | — | ⏳ Not started | |
+| 61 | Documents — List & create | /documents | ✅ Built | Card UI with status badges |
+| 62 | Document types (proposal, contract, quotation, NDA, other) | Documents tab | ✅ Built | All 5 types supported |
+| 63 | Document templates library | Templates tab | ✅ Built | 3 default templates with merge fields |
+| 64 | Merge fields ({{client_name}}, {{company}}, etc.) | Document editor | ✅ Built | Auto-replaced in preview |
+| 65 | Document versions | Document model | ✅ Built | Auto-incremented on save |
+| 66 | AI "Write with AI" with quota tracking | AI Writer modal | ✅ Built | Simulated LLM, counts against quota |
+| 67 | AI monthly quota (3/25/100 by plan) | AI Writer | ✅ Built | Resets monthly, shows remaining |
+| 68 | E-signature — send for signature | Document editor | ✅ Built | Generates secure signing token |
+| 69 | E-signature — typed signature | Signing view | ✅ Built | Serif font preview |
+| 70 | E-signature — drawn signature | Signing view | ✅ Built | Canvas area (simulated) |
+| 71 | E-signature — statuses (pending/viewed/signed/declined) | Signatures tab | ✅ Built | Full lifecycle |
+| 72 | E-signature — audit trail (IP, user agent, timestamps) | Signing view (audit) | ✅ Built | Captured on view/sign |
+| 73 | E-signature — decline with reason | Signing view | ✅ Built | Reason stored |
+| 74 | E-signature — signed PDF / audit certificate | Signing view | ✅ Built | Print-ready audit view |
+| 75 | Intake forms — form builder | Forms tab | ✅ Built | Drag-and-drop field builder |
+| 76 | Intake forms — all field types (text, longtext, email, phone, select, multiselect, date, file, checkbox, number) | Form builder | ✅ Built | 10 field types |
+| 77 | Intake forms — required flags | Form builder | ✅ Built | Per-field required toggle |
+| 78 | Intake forms — tokenized public links | Forms tab | ✅ Built | Unique token per form |
+| 79 | Intake forms — public submission (no login) | Public form preview | ✅ Built | Works without auth |
+| 80 | Intake forms — response tracking | Forms tab | ✅ Built | Response count, stored data |
+| 81 | Intake forms — revoke/regenerate link | Forms tab | ✅ Built | Invalidates old token |
+| 82 | Document editor with HTML content | Document editor | ✅ Built | Rich HTML editing |
+| 83 | Document print/PDF export | Document editor | ✅ Built | Print-ready with merge fields |
 
 ## P6 — Scheduling & Team
 
