@@ -88,12 +88,13 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Demo login
-    if (loginEmail === 'demo@clientertap.com' && loginPassword === 'demo123') {
-      actions.login('demo@clientertap.com', 'demo123');
+    // Accept any email/password for demo (simulates real auth)
+    // In production, this would validate against the backend
+    if (loginEmail && loginPassword) {
+      actions.login(loginEmail, loginPassword);
       onAuth();
     } else {
-      alert('Invalid credentials. Try demo@clientertap.com / demo123');
+      alert('Please enter both email and password');
     }
     
     setLoading(false);
@@ -139,9 +140,47 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
     setLoading(false);
   };
 
-  const handleGoogleSignIn = () => {
-    // In production, this would redirect to Google OAuth
-    alert('Google Sign-In would redirect to Google OAuth in production');
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    
+    // Simulate Google OAuth flow
+    // In production, this would redirect to Google OAuth consent screen
+    // For demo, we simulate a successful Google login
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Simulate Google user data
+    const googleUser = {
+      name: 'Google User',
+      email: `user${Math.floor(Math.random() * 1000)}@gmail.com`,
+      picture: `https://ui-avatars.com/api/?name=Google+User&background=4285F4&color=fff`
+    };
+    
+    // Check if this is login or signup mode
+    if (mode === 'login') {
+      // For login, just log in with the Google user
+      actions.login(googleUser.email, 'google-oauth-token');
+      onAuth();
+    } else {
+      // For signup, create a new workspace with Google user data
+      const workspaceName = `${googleUser.name}'s Workspace`;
+      const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      
+      actions.signup({
+        name: googleUser.name,
+        email: googleUser.email,
+        workspaceName,
+        slug,
+        country: 'US',
+        utmSource,
+        utmMedium,
+        utmCampaign
+      });
+      
+      onAuth();
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -279,7 +318,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
               </button>
 
               <div className="text-center text-sm text-ink-muted">
-                Demo: demo@clientertap.com / demo123
+                💡 Enter any email and password to sign in (demo mode)
               </div>
             </form>
           )}

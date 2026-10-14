@@ -1886,6 +1886,19 @@ function ActivityPage() {
 function SettingsPage() {
   const state = useAppState();
   const [tab, setTab] = useState('workspace');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+
+  const tabs = [
+    { id: 'workspace', label: 'Workspace', icon: Building2 },
+    { id: 'profile', label: 'Profile', icon: UserCircle },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'team', label: 'Team', icon: UserPlus },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'integrations', label: 'Integrations', icon: Zap },
+    { id: 'data', label: 'Data & Privacy', icon: FileText },
+  ];
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -1895,10 +1908,11 @@ function SettingsPage() {
       </div>
 
       <div className="flex border-b border-line overflow-x-auto">
-        {['workspace', 'billing', 'team', 'notifications'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px capitalize whitespace-nowrap ${tab === t ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
-            {t}
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap flex items-center gap-2 ${tab === t.id ? 'border-primary-600 text-primary-600' : 'border-transparent text-ink-muted'}`}>
+            <t.icon size={16} />
+            {t.label}
           </button>
         ))}
       </div>
@@ -2067,6 +2081,245 @@ function SettingsPage() {
               </label>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'profile' && (
+        <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+          <h3 className="font-semibold text-ink">Profile settings</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Full name</label>
+              <input type="text" defaultValue={state.users[0]?.name}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Email</label>
+              <input type="email" defaultValue={state.users[0]?.email}
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Phone</label>
+              <input type="tel" placeholder="+1 (555) 000-0000"
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">Timezone</label>
+              <select defaultValue="America/New_York"
+                className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="America/New_York">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="Asia/Kolkata">India Standard Time (IST)</option>
+                <option value="Europe/London">Greenwich Mean Time (GMT)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">Bio</label>
+            <textarea placeholder="Tell us about yourself..." rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+          </div>
+          <button className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Save profile</button>
+        </div>
+      )}
+
+      {tab === 'security' && (
+        <div className="space-y-4">
+          <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+            <h3 className="font-semibold text-ink">Password</h3>
+            <p className="text-sm text-ink-muted">Last changed 30 days ago</p>
+            <button onClick={() => setShowPasswordChange(true)}
+              className="px-4 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">
+              Change password
+            </button>
+          </div>
+
+          <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+            <h3 className="font-semibold text-ink">Two-factor authentication</h3>
+            <p className="text-sm text-ink-muted">Add an extra layer of security to your account</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-ink">Authenticator app</div>
+                <div className="text-xs text-ink-muted">Use an app like Google Authenticator</div>
+              </div>
+              <button className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">
+                Enable
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+            <h3 className="font-semibold text-ink">Active sessions</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-canvas">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                    <Globe size={18} className="text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-ink">Current session</div>
+                    <div className="text-xs text-ink-muted">Chrome on macOS • {state.workspace?.country || 'US'}</div>
+                  </div>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">Active</span>
+              </div>
+            </div>
+            <button className="px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50">
+              Sign out all other sessions
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'integrations' && (
+        <div className="space-y-4">
+          <div className="bg-surface rounded-2xl border border-line p-6">
+            <h3 className="font-semibold text-ink mb-4">Connected integrations</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-canvas">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <Calendar size={18} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-ink">Google Calendar</div>
+                    <div className="text-xs text-ink-muted">Sync meetings and events</div>
+                  </div>
+                </div>
+                <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700">Connected</span>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-canvas">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                    <Mail size={18} className="text-red-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-ink">Gmail</div>
+                    <div className="text-xs text-ink-muted">Send invoices and notifications</div>
+                  </div>
+                </div>
+                <button className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-lg">
+                  Connect
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-canvas">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                    <MessageSquare size={18} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-ink">Slack</div>
+                    <div className="text-xs text-ink-muted">Get notifications in Slack</div>
+                  </div>
+                </div>
+                <button className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold rounded-lg">
+                  Connect
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'data' && (
+        <div className="space-y-4">
+          <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+            <h3 className="font-semibold text-ink">Export your data</h3>
+            <p className="text-sm text-ink-muted">Download all your data in CSV or JSON format</p>
+            <div className="flex gap-2">
+              <button className="px-4 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas flex items-center gap-2">
+                <Download size={16} />
+                Export as CSV
+              </button>
+              <button className="px-4 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas flex items-center gap-2">
+                <Download size={16} />
+                Export as JSON
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-surface rounded-2xl border border-line p-6 space-y-4">
+            <h3 className="font-semibold text-ink">Privacy settings</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-ink">Marketing emails</div>
+                  <div className="text-xs text-ink-muted">Receive product updates and tips</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked className="sr-only peer" />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-ink">Usage analytics</div>
+                  <div className="text-xs text-ink-muted">Help us improve by sharing anonymous usage data</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" defaultChecked className="sr-only peer" />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-red-50 rounded-2xl border border-red-200 p-6 space-y-4">
+            <h3 className="font-semibold text-red-900">Danger zone</h3>
+            <p className="text-sm text-red-700">Once you delete your account, there is no going back. Please be certain.</p>
+            <button onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl">
+              Delete account
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowPasswordChange(false)}></div>
+          <div className="relative w-full max-w-md bg-surface rounded-2xl shadow-soft-lg border border-line p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">Change password</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1">Current password</label>
+                <input type="password" className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1">New password</label>
+                <input type="password" className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1">Confirm new password</label>
+                <input type="password" className="w-full px-3 py-2 rounded-xl border border-line bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowPasswordChange(false)} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+                <button onClick={() => { setShowPasswordChange(false); alert('Password changed successfully!'); }} className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl">Update password</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeleteConfirm(false)}></div>
+          <div className="relative w-full max-w-md bg-surface rounded-2xl shadow-soft-lg border border-line p-6">
+            <h2 className="text-lg font-semibold text-ink mb-2">Delete account?</h2>
+            <p className="text-sm text-ink-muted mb-4">This action cannot be undone. All your data will be permanently deleted.</p>
+            <div className="space-y-3">
+              <input type="text" placeholder="Type 'DELETE' to confirm" className="w-full px-3 py-2 rounded-xl border border-red-200 bg-canvas text-sm text-ink focus:outline-none focus:ring-2 focus:ring-red-500" />
+              <div className="flex gap-2">
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 border border-line rounded-xl text-sm font-medium text-ink hover:bg-canvas">Cancel</button>
+                <button onClick={() => { alert('Account deletion scheduled. You have 30 days to cancel.'); setShowDeleteConfirm(false); }} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl">Delete my account</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
